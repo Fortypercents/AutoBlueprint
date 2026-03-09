@@ -8,6 +8,7 @@ class MaterialType(Enum):
     IRON_ORE = auto()
     COPPER_ORE = auto()
     IRON_PLATE = auto()
+    IRON_INGOT = auto()
     # 后续可继续添加十余种材料...
 
 class Material:
