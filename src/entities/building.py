@@ -15,7 +15,7 @@ class Building:
         self.needs_output = False
         self.output_materials: Dict[MaterialType, float] = {}
 
-        self.production_speed = 1.0
+        self.production_speed = 1
         self.consumes_power = False
         self.power_consumption = 0.0
 
@@ -31,5 +31,5 @@ class Building:
 
     def reset_ports(self):
         """在重新规划布局时，清空当前端口连接状态"""
-        self.active_input_ports.append()
+        self.active_input_ports.clear()  # <--- 改为 clear()
         self.active_output_ports.clear()

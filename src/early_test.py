@@ -1,6 +1,8 @@
 import random
 from enum import Enum, auto
 
+# 检测最基础的框架能否正常运转，在测试中添加了输入口，一级工厂以及一个二级工厂，
+# 测试文件验证在最简单的情况之下能否正常构建蓝图以及能否发现将两个工厂直接相连能节省传送带以及占地面积
 
 # --- 1. 沿用之前的类定义 ---
 class MaterialType(Enum):

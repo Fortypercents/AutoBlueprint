@@ -5,6 +5,11 @@ class MaterialState(Enum):
     LIQUID = auto()
 
 class MaterialType(Enum):
+    # ==========================================
+    # 0. Test
+    # ==========================================
+    IRON_ORE = auto()
+    IRON_PLATE = auto()
 
     # ==========================================
     # 1. 原料 (Raw Materials)

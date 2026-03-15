@@ -43,6 +43,54 @@ class GridMap:
         self.buildings.append(building)
         return True
 
+    # 因为只需要写grid[x][y] is none就可以检测所以不需要can_place辅助
+    def place_transport(self, transport: TransportComponent, x: int, y: int, direction: Direction) -> bool:
+        """放置普通 1x1 运输元件（传送带、分配器等）"""
+        if not self.is_in_bounds(x, y) or self.grid[y][x] is not None:
+            return False
+
+        transport.pos = (x, y)
+        transport.direction = direction
+        transport.current_item = None
+        transport.next_tick_item = None
+
+        self.grid[y][x] = transport
+        self.transports.append(transport)
+        return True
+
+    # 因为只需要写grid[x][y] is none就可以检测所以不需要can_place辅助
+    def place_bridge(self, bridge, start_x: int, start_y: int, direction: Direction, span_length: int) -> bool:
+        """
+        放置传输桥。跨度 span_length 表示中间跨过的格子数。
+        例如 span_length=2，起点(0,0)向右，则终点在(3,0)。
+        """
+        if not (bridge.min_length <= span_length <= bridge.max_length):
+            return False
+
+        # 计算终点坐标
+        dx, dy = direction.value
+        end_x = start_x + dx * (span_length + 1)
+        end_y = start_y + dy * (span_length + 1)
+
+        # 检查起点和终点是否合法且为空
+        if not self.is_in_bounds(start_x, start_y) or not self.is_in_bounds(end_x, end_y):
+            return False
+        if self.grid[start_y][start_x] is not None or self.grid[end_y][end_x] is not None:
+            return False
+
+        # 记录起点和终点状态
+        bridge.pos = (start_x, start_y)
+        bridge.end_pos = (end_x, end_y)
+        bridge.direction = direction
+        bridge.current_item = None
+        bridge.next_tick_item = None
+
+        # 将起点和终点都注册到网格中 (指向同一个 Bridge 对象)
+        self.grid[start_y][start_x] = bridge
+        self.grid[end_y][end_x] = bridge
+        self.transports.append(bridge)
+        return True
+
     def get_perimeter_coords(self, building: Building) -> List[Tuple[int, int]]:
         """获取建筑外延一圈的所有相邻坐标"""
         start_x, start_y = building.anchor_pos
@@ -74,9 +122,26 @@ class GridMap:
 
             # 情况 1: 旁边是传送带
             if isinstance(neighbor, TransportComponent):
-                # 如果传送带的方向指向当前建筑，则是输入源
-                # 这里的逻辑需要根据 neighbor 的 direction 和建筑的相对位置进行向量计算
-                pass  # 留给详细实现
+                nx, ny = px, py
+                dx, dy = neighbor.direction.value
+
+                # 计算传送带的“正前方”指向哪个坐标
+                target_x = nx + dx
+                target_y = ny + dy
+
+                # 获取建筑的实际占地范围
+                start_x, start_y = building.anchor_pos
+                w, h = building.size
+
+                # 检查 target_x, target_y 是否在建筑内部的网格中
+                is_pointing_inside = (start_x <= target_x < start_x + w) and (start_y <= target_y < start_y + h)
+
+                if is_pointing_inside:
+                    # 传送带指向建筑内部 -> 这是输入源
+                    building.active_input_ports.append((nx, ny))
+                else:
+                    # 传送带背向或侧向建筑 -> 这是输出目标
+                    building.active_output_ports.append((nx, ny))
 
             # 情况 2: 旁边是另一个建筑 (Direct Insertion)
             elif isinstance(neighbor, Building):
@@ -85,6 +150,54 @@ class GridMap:
                 if shared_materials:
                     building.active_output_ports.append((px, py))
                     neighbor.active_input_ports.append(building.anchor_pos)
+
+    # ==========================================
+    # Tick 引擎依赖的底层辅助方法 (【已修复缩进错误】)
+    # ==========================================
+    def _get_cell(self, x: int, y: int):
+        if self.is_in_bounds(x, y):
+            return self.grid[y][x]
+        return None
+
+    def _is_blocked(self, cell) -> bool:
+        """检查目标网格是否堵塞（不可接收物品）"""
+        if cell is None:
+            return True  # 空地不能走
+        if isinstance(cell, Building):
+            return False  # 简易处理：假设建筑无限吞吐（真实情况应检查其 capacity）
+        if isinstance(cell, TransportComponent):
+            # 如果下一帧它已经预定了物品，说明堵塞
+            return getattr(cell, 'next_tick_item', None) is not None or getattr(cell, 'current_item', None) is not None
+        return True
+
+    def _get_sides(self, x: int, y: int, direction: Direction):
+        """获取元件的左右两侧坐标 (用于溢流门和分类器)"""
+        if direction in (Direction.UP, Direction.DOWN):
+            return self._get_cell(x - 1, y), self._get_cell(x + 1, y)
+        else:
+            return self._get_cell(x, y - 1), self._get_cell(x, y + 1)
+
+    def _apply_next_tick_states(self):
+        """将 next_tick_item 固化为 current_item"""
+        for transport in self.transports:
+            if hasattr(transport, 'next_tick_item') and transport.next_tick_item is not None:
+                transport.current_item = transport.next_tick_item
+                transport.next_tick_item = None
+
+    def _push_building_outputs(self, building: Building):
+        """阶段 1.3: 将建筑产物推上管网"""
+        if not hasattr(building, 'output_buffer'):
+            building.output_buffer = {}
+
+        for mat, amount in list(building.output_buffer.items()):
+            if amount >= 1.0:  # 假设凑齐 1 个整数才能上管网
+                # 寻找一个空闲的输出端口
+                for out_pos in building.active_output_ports:
+                    target_cell = self._get_cell(out_pos[0], out_pos[1])
+                    if isinstance(target_cell, TransportComponent) and not self._is_blocked(target_cell):
+                        target_cell.next_tick_item = mat  # 物品上管网
+                        building.output_buffer[mat] -= 1.0
+                        break
 
     def tick(self):
         """
@@ -96,21 +209,30 @@ class GridMap:
         # 阶段 1: 建筑生产 (Production Phase)
         # ==========================================
         for building in self.buildings:
-            # 1. 检查输入库存是否满足生产配方
+            # 安全初始化库存字典
+            if not hasattr(building, 'inventory'):
+                building.inventory = {}
+            if not hasattr(building, 'output_buffer'):
+                building.output_buffer = {}
+
+            # 【重点新增】：提取机器的生产倍率 (如没有设置则默认 1.0)
+            speed = getattr(building, 'production_speed', 1.0)
+
+            # 1. 检查输入库存是否满足生产配方 (计入倍率)
             can_produce = True
             for mat, required_amount in building.input_materials.items():
-                if building.inventory.get(mat, 0) < required_amount:
+                if building.inventory.get(mat, 0) < (required_amount * speed):
                     can_produce = False
                     break
 
-            # 2. 执行生产消耗与产出
+            # 2. 执行生产消耗与产出 (计入倍率)
             if can_produce:
                 for mat, amount in building.input_materials.items():
-                    building.inventory[mat] -= amount  # 扣除原料
+                    building.inventory[mat] -= (amount * speed)  # 扣除原料
 
                 for mat, amount in building.output_materials.items():
                     # 将产物放入机器的输出缓存区
-                    building.output_buffer[mat] = building.output_buffer.get(mat, 0) + amount
+                    building.output_buffer[mat] = building.output_buffer.get(mat, 0) + (amount * speed)
 
             # 3. 将输出缓存区的物品推入管网 (直连建筑 或 传送带)
             self._push_building_outputs(building)
@@ -118,12 +240,9 @@ class GridMap:
         # ==========================================
         # 阶段 2: 运输网络流转 (Transport Routing Phase)
         # ==========================================
-        # 注意：在真实的 2D 网格游戏中，传送带的更新必须“从下游到上游”倒序遍历，
-        # 或者使用“双缓冲 (Double Buffering)”，以防止物品在一帧内瞬间移动到底。
-        # 这里展示核心的状态转移逻辑：
-
         for transport in self.transports:
-            if transport.current_item is None:
+            # 【修复点】：检查 hasattr 避免报错
+            if getattr(transport, 'current_item', None) is None:
                 continue  # 空的传送带直接跳过
 
             current_x, current_y = transport.pos
@@ -136,7 +255,7 @@ class GridMap:
                 next_cell = self._get_cell(next_x, next_y)
 
                 # 如果前方是空的传送带，移动物品
-                if isinstance(next_cell, Belt) and next_cell.current_item is None:
+                if isinstance(next_cell, Belt) and getattr(next_cell, 'current_item', None) is None:
                     next_cell.next_tick_item = transport.current_item
                     transport.current_item = None
 
@@ -161,6 +280,22 @@ class GridMap:
                     # 前方畅通，正常向前输出
                     front_cell.next_tick_item = transport.current_item
                     transport.current_item = None
+
+            # --- 分支 C: 传输桥逻辑 (Bridge) (【已修复嵌套错误！】) ---
+            # 引入 Bridge 需要判断物品当前是在起点还是终点
+            elif transport.__class__.__name__ == "Bridge":
+                # 只有当计算坐标恰好在桥的【起点】时，才触发跨越传送
+                if (current_x, current_y) == transport.pos:
+                    # 物品瞬间跨越到终点的前方一格
+                    dx, dy = transport.direction.value
+                    end_x, end_y = transport.end_pos
+                    output_x = end_x + dx
+                    output_y = end_y + dy
+
+                    output_cell = self._get_cell(output_x, output_y)
+                    if not self._is_blocked(output_cell):
+                        output_cell.next_tick_item = transport.current_item
+                        transport.current_item = None
 
         # 统一应用下一帧的状态 (模拟并发更新)
         self._apply_next_tick_states()
