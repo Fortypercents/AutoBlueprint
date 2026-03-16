@@ -60,6 +60,7 @@ furnace.needs_output = True
 furnace.output_materials = {MaterialType.IRON_PLATE: 1.0}
 furnace.consumes_power = True
 furnace.power_consumption = 90.0
+furnace.allowed_input_materials = [MaterialType.IRON_ORE]
 
 BUILDING_CATALOG[201] = furnace
 

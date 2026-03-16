@@ -15,9 +15,15 @@ class Building:
         self.needs_output = False
         self.output_materials: Dict[MaterialType, float] = {}
 
-        self.production_speed = 1
+        self.production_speed = 1.0
         self.consumes_power = False
         self.power_consumption = 0.0
+
+        # ==========================================
+        # [新增] 物流与库存控制属性
+        # ==========================================
+        self.max_inventory: float = 20.0  # 默认机器每种原料最大可容纳 20 个
+        self.allowed_input_materials: List[MaterialType] = [] # 允许输入的原料种类白名单
 
         # 2. 端口特性声明 (静态能力)
         self.allows_omni_ports = True  # 允许四周任意边缘作为端口
@@ -31,5 +37,5 @@ class Building:
 
     def reset_ports(self):
         """在重新规划布局时，清空当前端口连接状态"""
-        self.active_input_ports.clear()  # <--- 改为 clear()
+        self.active_input_ports.clear()
         self.active_output_ports.clear()
