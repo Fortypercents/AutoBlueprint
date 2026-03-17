@@ -1,7 +1,6 @@
 from typing import List, Tuple, Optional, Any
 from entities.building import Building
-from entities.transport import TransportComponent, Direction, Belt, OverflowGate, LogicRouter
-
+from entities.transport import TransportComponent, Direction
 
 class GridMap:
     def __init__(self, width: int, height: int):
@@ -188,7 +187,7 @@ class GridMap:
                 return 0.0  # 物理状态不兼容，彻底拦截（如水进传送带）
 
         target_item = getattr(target_cell, 'next_tick_item', None) or getattr(target_cell, 'current_item', None)
-        capacity = max(12.0, getattr(target_cell, 'max_capacity', 12.0))
+        capacity = max(1.0, getattr(target_cell, 'max_capacity', 1.0))
 
         if target_item is None:
             push_amt = min(amt, capacity)

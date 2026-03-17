@@ -3,7 +3,14 @@ from entities.building import SystemABuilding, SystemBBuilding
 from entities.material import MaterialType
 
 # 引入我们刚刚重写的所有 SystemA 和 SystemB 运输元件
-from entities.transport import *
+from entities.transport import (
+    SystemABelt, SystemALogicRouter, SystemAOverflowGate, SystemABridge,
+    SystemAPipe, SystemAPipeRouter, SystemAPipeOverflowGate, SystemAPipeBridge,
+    SystemBBelt, SystemBPipe,
+    SystemBSplitter, SystemBPipeSplitter,
+    SystemBMerger, SystemBPipeMerger,
+    SystemBBeltAccess, SystemBPipeAccess
+)
 
 BUILDING_CATALOG = {}
 
@@ -45,6 +52,9 @@ BUILDING_CATALOG[402] = seed_extractor
 # ==========================================
 # 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)
 # ==========================================
+# ==========================================
+# 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)
+# ==========================================
 def get_transport_instance(component_id: int):
     # ---------------- 体系 A (固体) ----------------
     if component_id == 101:
@@ -56,11 +66,17 @@ def get_transport_instance(component_id: int):
         belt.max_capacity = 12.0
         return belt
     if component_id == 110:
-        return SystemALogicRouter(110, "分配器(A)")
+        router = SystemALogicRouter(110, "分配器(A)")
+        router.max_capacity = 12.0
+        return router
     if component_id == 111:
-        return SystemAOverflowGate(111, "溢流门(A)")
+        overflowgate = SystemAOverflowGate(111, "溢流门(A)")
+        overflowgate.max_capacity = 12.0
+        return overflowgate
     if component_id == 112:
-        return SystemABridge(112, "基础传送桥(A)", min_length=1, max_length=3)
+        bridge = SystemABridge(112, "基础传送桥(A)", min_length=1, max_length=3)
+        bridge.max_capacity = 12.0
+        return bridge
 
     # ---------------- 体系 A (液体) ----------------
     if component_id == 151:
@@ -68,33 +84,55 @@ def get_transport_instance(component_id: int):
         pipe.max_capacity = 12.0
         return pipe
     if component_id == 160:
-        return SystemAPipeRouter(160, "管道分配器(A)")
+        router = SystemAPipeRouter(160, "管道分配器(A)")
+        router.max_capacity = 12.0
+        return router
     if component_id == 161:
-        return SystemAPipeOverflowGate(161, "管道溢流门(A)")
+        overflowgate = SystemAPipeOverflowGate(161, "管道溢流门(A)")
+        overflowgate.max_capacity = 12.0
+        return overflowgate
     if component_id == 162:
-        return SystemAPipeBridge(162, "基础管道桥(A)", min_length=1, max_length=3)
+        bridge = SystemAPipeBridge(162, "基础管道桥(A)", min_length=1, max_length=3)
+        bridge.max_capacity = 12.0
+        return bridge
 
     # ---------------- 体系 B (基础线缆) ----------------
     if component_id == 301:
-        return SystemBBelt(301, "生物传送带(B)")
+        belt = SystemBBelt(301, "生物传送带(B)")
+        belt.max_capacity = 1.0
+        return belt
     if component_id == 302:
-        return SystemBPipe(302, "生物管道(B)")
+        pipe = SystemBPipe(302, "生物管道(B)")
+        pipe.max_capacity = 1.0
+        return pipe
 
     # ---------------- 体系 B (固体物流元件) ----------------
     if component_id == 311:
-        return SystemBSplitter(311, "传送分流器(B)")
+        splitter = SystemBSplitter(311, "传送分流器(B)")
+        splitter.max_capacity = 1.0
+        return splitter
     if component_id == 312:
-        return SystemBMerger(312, "传送汇流器(B)")
+        merger = SystemBMerger(312, "传送汇流器(B)")
+        merger.max_capacity = 1.0
+        return merger
     if component_id == 313:
-        return SystemBBeltAccess(313, "传送准入器(B)")
+        access = SystemBBeltAccess(313, "传送准入器(B)")
+        access.max_capacity = 1.0
+        return access
 
     # ---------------- 体系 B (液体物流元件) ----------------
     if component_id == 321:
-        return SystemBPipeSplitter(321, "管道分流器(B)")
+        splitter = SystemBPipeSplitter(321, "管道分流器(B)")
+        splitter.max_capacity = 1.0
+        return splitter
     if component_id == 322:
-        return SystemBPipeMerger(322, "管道汇流器(B)")
+        merger = SystemBPipeMerger(322, "管道汇流器(B)")
+        merger.max_capacity = 1.0
+        return merger
     if component_id == 323:
-        return SystemBPipeAccess(323, "管道准入器(B)")
+        access = SystemBPipeAccess(323, "管道准入器(B)")
+        access.max_capacity = 1.0
+        return access
 
     raise ValueError(f"未知的运输组件 ID: {component_id}")
 

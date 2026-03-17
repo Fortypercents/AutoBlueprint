@@ -4,7 +4,6 @@ import heapq
 from entities.material import MaterialType
 from entities.building import Building
 from entities.registry import get_building_instance, BUILDING_CATALOG, get_transport_instance
-from entities.transport import Direction, Belt
 from environment.grid_map import GridMap
 
 
