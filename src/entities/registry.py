@@ -64,8 +64,42 @@ furnace.allowed_input_materials = [MaterialType.IRON_ORE]
 
 BUILDING_CATALOG[201] = furnace
 
+# --- 3. 注册种植机 (ID: 203) ---
+planter = Building(component_id=203, size=(4, 4), name="种植机 (Planter)")
+planter.needs_input = True
+# 每 tick 消耗 1 份苹果种子
+planter.input_materials = {MaterialType.APPLE_SEED: 1.0}
+planter.needs_output = True
+# 每 tick 产出 1 份苹果
+planter.output_materials = {MaterialType.APPLE: 1.0}
+planter.consumes_power = True
+planter.power_consumption = 40.0
+# 设置最大库存，防止上游种子无限堆积
+planter.max_inventory = 20.0
+planter.allowed_input_materials = [MaterialType.APPLE_SEED]
+# 不允许建筑间直接传输
+planter.allows_direct_insertion = False
 
-# --- 2. 注册组装机 (ID: 202) ---
+BUILDING_CATALOG[203] = planter
+
+# --- 4. 注册采种机 (ID: 204) ---
+seed_extractor = Building(component_id=204, size=(4, 4), name="采种机 (Seed Extractor)")
+seed_extractor.needs_input = True
+# 每 tick 消耗 1 份苹果
+seed_extractor.input_materials = {MaterialType.APPLE: 1.0}
+seed_extractor.needs_output = True
+# 每 tick 产出 2 份苹果种子
+seed_extractor.output_materials = {MaterialType.APPLE_SEED: 2.0}
+seed_extractor.consumes_power = True
+seed_extractor.power_consumption = 60.0
+# 设置最大库存
+seed_extractor.max_inventory = 20.0
+seed_extractor.allowed_input_materials = [MaterialType.APPLE]
+# 不允许建筑间直接传输
+seed_extractor.allows_direct_insertion = False
+
+BUILDING_CATALOG[204] = seed_extractor
+
 
 def get_transport_instance(component_id: int):
     """工厂方法：获取运输组件副本"""

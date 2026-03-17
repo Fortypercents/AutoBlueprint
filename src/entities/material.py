@@ -5,6 +5,8 @@ class MaterialState(Enum):
     LIQUID = auto()
 
 class MaterialType(Enum):
+
+    # MINDUSTRY
     # ==========================================
     # 0. Test
     # ==========================================
@@ -39,6 +41,13 @@ class MaterialType(Enum):
     # ==========================================
     EXPLOSIVES = auto()  # 爆炸物 (由硫化物/孢子等混合)
     SUPER_ALLOY = auto()  # 超级合金 (由铜+铅+钛+硅等多种材料锻造)
+
+    # ENDFIELD
+    # ==========================================
+    # 1. 农业与生物链 (Agriculture)
+    # ==========================================
+    APPLE_SEED = auto()  # 苹果种子
+    APPLE = auto()  # 苹果
 
 
 class Material:
