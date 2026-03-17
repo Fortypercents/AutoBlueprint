@@ -116,7 +116,8 @@ class GridMap:
         return True
 
     def _is_valid_router_output(self, cell, from_x, from_y) -> bool:
-        if self._is_blocked(cell):
+        """结构校验：检查目标格子是否为合法的输出方向（仅校验连接关系，不再校验是否满载）"""
+        if not isinstance(cell, TransportComponent):
             return False
         if isinstance(cell, Belt):
             dx = cell.pos[0] - from_x
@@ -137,8 +138,39 @@ class GridMap:
                 transport.current_item = transport.next_tick_item
                 transport.next_tick_item = None
 
+    # ==========================================
+    # 核心流体力学引擎 (智能合并与分配)
+    # ==========================================
+    def _push_to_cell(self, target_cell, mat, amt) -> float:
+        """底层物流接口：尝试将最多 amt 数量的 mat 挤进 target_cell 中，返回实际挤入的数量"""
+        if not isinstance(target_cell, TransportComponent):
+            return 0.0
+
+        target_item = getattr(target_cell, 'next_tick_item', None) or getattr(target_cell, 'current_item', None)
+        capacity = max(12.0, getattr(target_cell, 'max_capacity', 12.0))
+
+        # 目标为空，直接放入
+        if target_item is None:
+            push_amt = min(amt, capacity)
+            target_cell.next_tick_item = (mat, push_amt)
+            return push_amt
+
+        # 解析目标的物资和数量 (向下兼容单体枚举)
+        t_mat = target_item[0] if isinstance(target_item, tuple) else target_item
+        t_amt = target_item[1] if isinstance(target_item, tuple) else 1.0
+
+        # 种类相同，进行空间堆叠合并
+        if t_mat == mat:
+            space_left = capacity - t_amt
+            if space_left > 0:
+                push_amt = min(amt, space_left)
+                target_cell.next_tick_item = (mat, t_amt + push_amt)
+                return push_amt
+
+        return 0.0
+
     def _push_building_outputs(self, building: Building):
-        """阶段 1.3: 将建筑产物推上管网 (支持自动打包合并)"""
+        """阶段 1.3: 将建筑产物推上管网"""
         if not hasattr(building, 'output_buffer'):
             building.output_buffer = {}
 
@@ -146,63 +178,73 @@ class GridMap:
             if amount >= 1.0:
                 for out_pos in building.active_output_ports:
                     target_cell = self._get_cell(out_pos[0], out_pos[1])
-                    if isinstance(target_cell, TransportComponent):
-                        # 强行将所有传送带默认吞吐量提速到至少 12.0
-                        capacity = max(12.0, getattr(target_cell, 'max_capacity', 12.0))
-                        target_item = getattr(target_cell, 'current_item', None)
-
-                        if target_item is None:
-                            push_amt = min(amount, capacity)
-                            target_cell.current_item = (mat, push_amt)
-                            building.output_buffer[mat] -= push_amt
-                            amount -= push_amt
-                        elif isinstance(target_item, tuple):
-                            t_mat, t_amt = target_item
-                            if t_mat == mat:
-                                space_left = capacity - t_amt
-                                if space_left > 0:
-                                    push_amt = min(amount, space_left)
-                                    target_cell.current_item = (mat, t_amt + push_amt)
-                                    building.output_buffer[mat] -= push_amt
-                                    amount -= push_amt
+                    pushed = self._push_to_cell(target_cell, mat, amount)
+                    if pushed > 0:
+                        building.output_buffer[mat] -= pushed
+                        amount -= pushed
                     if amount < 1.0:
                         break
 
     def _try_move_or_merge(self, transport: TransportComponent, target_cell) -> bool:
-        """核心物流算法：尝试移动或合并物品，实现满载压缩"""
-        if not isinstance(target_cell, TransportComponent): return False
+        """基础传送带移动逻辑：尝试将当前拥有的物资全部推向下一格"""
+        if transport.current_item is None: return False
 
-        my_item = transport.current_item
-        if my_item is None: return False
+        mat = transport.current_item[0] if isinstance(transport.current_item, tuple) else transport.current_item
+        amt = transport.current_item[1] if isinstance(transport.current_item, tuple) else 1.0
 
-        # 1. 目标空闲，直接移动
-        if getattr(target_cell, 'next_tick_item', None) is None and getattr(target_cell, 'current_item', None) is None:
-            target_cell.next_tick_item = my_item
-            transport.current_item = None
+        pushed = self._push_to_cell(target_cell, mat, amt)
+        if pushed > 0:
+            if amt - pushed > 0:
+                transport.current_item = (mat, amt - pushed)
+            else:
+                transport.current_item = None
             return True
-
-        # 2. 目标已占用，尝试将物品挤进去 (合并 Stacking)
-        target_item = getattr(target_cell, 'next_tick_item', None) or getattr(target_cell, 'current_item', None)
-        if isinstance(my_item, tuple) and isinstance(target_item, tuple):
-            m_mat, m_amt = my_item
-            t_mat, t_amt = target_item
-            if m_mat == t_mat:
-                capacity = max(12.0, getattr(target_cell, 'max_capacity', 12.0))
-                space_left = capacity - t_amt
-                if space_left > 0:
-                    transfer = min(m_amt, space_left)
-                    target_cell.next_tick_item = (t_mat, t_amt + transfer)
-
-                    if m_amt - transfer > 0:
-                        transport.current_item = (m_mat, m_amt - transfer)
-                    else:
-                        transport.current_item = None
-                    return True  # 发生过有效移动
         return False
+
+    def _distribute_evenly(self, transport: TransportComponent, target_cells: List) -> bool:
+        """分配器核心：将携带的物品打散，每次仅分配 1 个单位，均匀轮询塞给有效的输出口"""
+        if getattr(transport, 'current_item', None) is None or not target_cells:
+            return False
+
+        mat = transport.current_item[0] if isinstance(transport.current_item, tuple) else transport.current_item
+        amt = transport.current_item[1] if isinstance(transport.current_item, tuple) else 1.0
+
+        # 分配器内置状态机，记忆上一次分配的出口索引，确保真正的 Round-Robin
+        if not hasattr(transport, 'rr_index'):
+            transport.rr_index = 0
+
+        consecutive_failures = 0
+        moved_any = False
+
+        # 如果所有口子连 1 个物品都塞不进去了，退出死循环
+        while amt > 0 and consecutive_failures < len(target_cells):
+            cell = target_cells[transport.rr_index]
+
+            # 关键：每次最多只向该出口挤入 1.0 的单位，而不是全塞进去！
+            push_val = min(amt, 1.0)
+            pushed = self._push_to_cell(cell, mat, push_val)
+
+            if pushed > 0:
+                amt -= pushed
+                consecutive_failures = 0
+                moved_any = True
+            else:
+                consecutive_failures += 1
+
+            # 轮询至下一个出口
+            transport.rr_index = (transport.rr_index + 1) % len(target_cells)
+
+        # 保存尚未分配完的物资 (分配不完卡在分配器里等下一帧)
+        if amt > 0:
+            transport.current_item = (mat, amt)
+        else:
+            transport.current_item = None
+
+        return moved_any
 
     def tick(self):
         # ==========================================
-        # 阶段 1: 建筑生产 (Production Phase)
+        # 阶段 1: 建筑内部生产 (Production Phase)
         # ==========================================
         for building in self.buildings:
             if not hasattr(building, 'inventory'): building.inventory = {}
@@ -221,11 +263,10 @@ class GridMap:
                 for mat, amount in building.output_materials.items():
                     building.output_buffer[mat] = building.output_buffer.get(mat, 0) + (amount * speed)
 
-            self._push_building_outputs(building)
+            # 🚨 核心修复：删除/注释掉这里的 self._push_building_outputs(building)
 
         # ==========================================
         # 阶段 2: 运输网络流转 (支持智能分流与合并)
-        # 逆序遍历极其重要！这保证了下游优先移动，释放出上游空间
         # ==========================================
         for transport in reversed(self.transports):
             if getattr(transport, 'current_item', None) is None:
@@ -245,28 +286,29 @@ class GridMap:
                 front_cell = self._get_cell(current_x + dx, current_y + dy)
                 left_cell, right_cell = self._get_sides(current_x, current_y, transport.direction)
 
-                # 依次尝试分流。如果一个口子塞满了，它会自动把剩下的物品塞进其他口子！
-                if self._is_valid_router_output(right_cell, current_x, current_y):
-                    self._try_move_or_merge(transport, right_cell)
-                if transport.current_item is not None and self._is_valid_router_output(left_cell, current_x, current_y):
-                    self._try_move_or_merge(transport, left_cell)
-                if transport.current_item is not None and self._is_valid_router_output(front_cell, current_x,
-                                                                                       current_y):
-                    self._try_move_or_merge(transport, front_cell)
+                valid_targets = []
+                if self._is_valid_router_output(right_cell, current_x, current_y): valid_targets.append(right_cell)
+                if self._is_valid_router_output(left_cell, current_x, current_y): valid_targets.append(left_cell)
+                if self._is_valid_router_output(front_cell, current_x, current_y): valid_targets.append(front_cell)
+
+                self._distribute_evenly(transport, valid_targets)
 
             # --- 分支 C: 溢流门 (Overflow Gate) ---
             elif isinstance(transport, OverflowGate):
                 front_cell = self._get_cell(current_x + transport.direction.value[0],
                                             current_y + transport.direction.value[1])
+                left_cell, right_cell = self._get_sides(current_x, current_y, transport.direction)
+
                 if self._is_valid_router_output(front_cell, current_x, current_y):
                     self._try_move_or_merge(transport, front_cell)
+
                 if transport.current_item is not None:
-                    left_cell, right_cell = self._get_sides(current_x, current_y, transport.direction)
-                    if self._is_valid_router_output(left_cell, current_x, current_y):
-                        self._try_move_or_merge(transport, left_cell)
-                    if transport.current_item is not None and self._is_valid_router_output(right_cell, current_x,
-                                                                                           current_y):
-                        self._try_move_or_merge(transport, right_cell)
+                    valid_side_targets = []
+                    if self._is_valid_router_output(left_cell, current_x, current_y): valid_side_targets.append(
+                        left_cell)
+                    if self._is_valid_router_output(right_cell, current_x, current_y): valid_side_targets.append(
+                        right_cell)
+                    self._distribute_evenly(transport, valid_side_targets)
 
             # --- 分支 D: 传输桥 (Bridge) ---
             elif transport.__class__.__name__ == "Bridge":
@@ -275,4 +317,14 @@ class GridMap:
                     self._try_move_or_merge(transport,
                                             self._get_cell(transport.end_pos[0] + dx, transport.end_pos[1] + dy))
 
+        # ==========================================
+        # 阶段 3: 将新产物推上管网 (修复复制Bug的关键点)
+        # ==========================================
+        # 必须在所有传送带旧物品移动完、腾出空位后，再把新一帧的产物放上流水线！
+        for building in self.buildings:
+            self._push_building_outputs(building)
+
+        # ==========================================
+        # 阶段 4: 应用下一帧状态
+        # ==========================================
         self._apply_next_tick_states()

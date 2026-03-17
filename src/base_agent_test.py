@@ -108,7 +108,7 @@ def run_test():
 
     print("=== ⚙️ 开始动态物流流转模拟 (12份/Tick) ===")
     total_iron_plate_yield = 0
-    ticks_to_simulate = 80
+    ticks_to_simulate = 120
 
     for tick in range(1, ticks_to_simulate + 1):
         # A. 左上角连续注入矿石 (保持 12.0 满载)
