@@ -1,6 +1,6 @@
 import time
 import os
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 from entities.material import MaterialType
 from entities.registry import get_transport_instance
 from entities.transport import Direction, TransportComponent, LogicRouter
@@ -51,10 +51,8 @@ class BlueprintTestAgent(BaseAgent):
         env.place_transport(get_transport_instance(102), env.width - 1, out_belt_y + 2, Direction.DOWN)
 
     def render_blueprint(self, env: GridMap, tick: int = 0, total_yield: float = 0):
-        """动态渲染蓝图，显示传送带上的数量"""
-        # 为了产生动画效果，在终端打印足够多的空行把旧画面顶上去
         print("\n" * 5)
-        print(f"=== 🗺️ 满载 12/s 汇流管线动态模拟 [Tick {tick:03d}] | 累计产出: {total_yield} 个 ===")
+        print(f"=== 🗺️ 满载物流管线动态模拟 [Tick {tick:03d}] | 累计产出: {total_yield} 个 ===")
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
         grid_strs = []
@@ -74,13 +72,10 @@ class BlueprintTestAgent(BaseAgent):
 
                     item = getattr(cell, 'current_item', None)
                     if item is not None:
-                        # 提取数量并格式化为两位数，如 12 -> "12", 5 -> "05"
                         amt = int(item[1]) if isinstance(item, tuple) else 1
                         base_char = "S" if is_router else dir_char
-                        # 带物品的显示格式：>12, v08, S12
                         row_str += f"{base_char}{amt:02d}"
                     else:
-                        # 空组件显示格式：[S],  > ,  v
                         row_str += "[S]" if is_router else f" {dir_char} "
                 else:
                     row_str += "[?]"
@@ -89,6 +84,37 @@ class BlueprintTestAgent(BaseAgent):
         for row in grid_strs:
             print(row)
         print("=====================================================================")
+
+
+# ==========================================
+# 稳态指纹提取函数
+# ==========================================
+def get_factory_state(env: GridMap) -> Tuple[Any, ...]:
+    """提取当前工厂的完整物流状态，并做哈希化处理"""
+    state = []
+
+    # 1. 提取所有传送带上的物品情况
+    for t in env.transports:
+        item = getattr(t, 'current_item', None)
+        if item is None:
+            state.append(None)
+        elif isinstance(item, tuple):
+            # 引入 round 防止浮点数精度引发的假性状态变化
+            state.append((item[0].value, round(item[1], 2)))
+        else:
+            state.append((item.value, 1.0))
+
+    # 2. 提取所有机器的库存情况（因为就算传送带看起来一样，机器肚子如果在变也算没稳定）
+    for b in env.buildings:
+        inv = getattr(b, 'inventory', {})
+        buf = getattr(b, 'output_buffer', {})
+        # 将字典转换为有序的元组
+        inv_tuple = tuple(sorted((k.value, round(v, 2)) for k, v in inv.items()))
+        buf_tuple = tuple(sorted((k.value, round(v, 2)) for k, v in buf.items()))
+        state.append(inv_tuple)
+        state.append(buf_tuple)
+
+    return tuple(state)
 
 
 def run_test():
@@ -102,16 +128,23 @@ def run_test():
     for b in env.buildings:
         env.update_connections(b)
 
-    # 初始空蓝图渲染
     agent.render_blueprint(env, 0, 0)
     time.sleep(1)
 
-    print("=== ⚙️ 开始动态物流流转模拟 (12份/Tick) ===")
+    print("=== ⚙️ 开始动态物流流转模拟 ===")
     total_iron_plate_yield = 0
-    ticks_to_simulate = 120
+    ticks_to_simulate = 100
+
+    # 用于稳态检测的数据结构
+    state_history = {}  # 保存 状态指纹 -> 记录所在的 Tick
+    yield_history = {}  # 保存 Tick -> 累计产量，用于计算周期内的平均产能
+
+    steady_state_entry_tick = -1
+    steady_state_period = -1
+    steady_yield_per_tick = 0.0
 
     for tick in range(1, ticks_to_simulate + 1):
-        # A. 左上角连续注入矿石 (保持 12.0 满载)
+        # A. 左上角连续注入矿石
         in_cell = env._get_cell(0, 2)
         if isinstance(in_cell, TransportComponent):
             target_item = getattr(in_cell, 'current_item', None)
@@ -122,34 +155,27 @@ def run_test():
                 if mat == MaterialType.IRON_ORE and amt < 12.0:
                     in_cell.current_item = (MaterialType.IRON_ORE, min(12.0, amt + 12.0))
 
-        # B. 机器吃矿 (读取机器自身的属性进行安全过滤与容量控制)
+        # B. 机器吃矿
         for b in env.buildings:
             if not hasattr(b, 'inventory'):
                 b.inventory = {}
             for px, py in b.active_input_ports:
                 port_cell = env._get_cell(px, py)
-                if isinstance(port_cell, TransportComponent) and getattr(port_cell, 'current_item',
-                                                                         None) is not None:
-
-                    # 提取物品类型和数量
+                if isinstance(port_cell, TransportComponent) and getattr(port_cell, 'current_item', None) is not None:
                     item = port_cell.current_item
                     mat = item[0] if isinstance(item, tuple) else item
                     amt = item[1] if isinstance(item, tuple) else 1.0
 
-                    # 核心机制 1：输入白名单过滤 (只有在 allowed_input_materials 里的物品才吃)
                     if mat not in b.allowed_input_materials:
-                        continue  # 物品不匹配，跳过，不吃
+                        continue
 
-                    # 核心机制 2：动态读取这台机器的最大库存上限
                     current_inv = b.inventory.get(mat, 0)
                     max_inv = b.max_inventory
 
                     if current_inv < max_inv:
-                        # 机器只能吃掉（最大容量 - 当前库存）和（传送带数量）中较小的那个
                         take_amt = min(amt, max_inv - current_inv)
                         b.inventory[mat] = current_inv + take_amt
 
-                        # 结算传送带上剩余的物资
                         if amt - take_amt > 0:
                             port_cell.current_item = (mat, amt - take_amt)
                         else:
@@ -169,14 +195,44 @@ def run_test():
             else:
                 if out_item == MaterialType.IRON_PLATE:
                     total_iron_plate_yield += 1
-            # 收集后清空末端
             out_cell.current_item = None
 
-        # E. 打印本帧蓝图并暂停，形成动画
-        agent.render_blueprint(env, tick, total_iron_plate_yield)
-        time.sleep(0.15)  # 调节此数值可以改变动画播放速度 (秒)
+        # ==========================================
+        # E. 稳态捕捉检测逻辑
+        # ==========================================
+        if steady_state_entry_tick == -1:
+            current_state = get_factory_state(env)
 
-    print(f"\n✅ 动画演示结束！蓝图内实际共收集满载产物: {total_iron_plate_yield} 个")
+            if current_state in state_history:
+                # 触发稳态！找到它是哪一帧首次进入这个状态的
+                steady_state_entry_tick = state_history[current_state]
+                steady_state_period = tick - steady_state_entry_tick
+
+                # 计算这个周期内的平均产量
+                yield_in_period = total_iron_plate_yield - yield_history[steady_state_entry_tick]
+                steady_yield_per_tick = yield_in_period / steady_state_period
+            else:
+                # 未触发稳态，记录当前指纹
+                state_history[current_state] = tick
+                yield_history[tick] = total_iron_plate_yield
+
+        # F. 打印本帧蓝图并暂停
+        agent.render_blueprint(env, tick, total_iron_plate_yield)
+        time.sleep(0.1)
+
+    # 动画结束，打印最终报告
+    print(f"\n✅ 动画演示结束！蓝图内实际共收集产物: {total_iron_plate_yield} 个")
+    print("================ 📊 工厂运行数据评估 ================")
+    if steady_state_entry_tick != -1:
+        print(f" -> 🟢 进入稳定运行状态的 Tick: {steady_state_entry_tick}")
+        print(f" -> 🔄 稳态循环周期: {steady_state_period} Tick")
+        print(f" -> ⚡ 稳定运行下的平均产量: {steady_yield_per_tick:.2f} 个 / Tick")
+        if steady_yield_per_tick >= target_outputs[MaterialType.IRON_PLATE]:
+            print(" -> 🏆 评价: 完美达标！蓝图无瓶颈。")
+        else:
+            print(" -> ⚠️  评价: 存在瓶颈，未能达到目标输入额度。")
+    else:
+        print(f" -> 🔴 在 {ticks_to_simulate} Tick 内，工厂未进入完美稳定状态。可能是因为传送带较长，需要增加模拟时长。")
 
 
 if __name__ == "__main__":
