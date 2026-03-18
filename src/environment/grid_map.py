@@ -13,21 +13,34 @@ class GridMap:
     def is_in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.width and 0 <= y < self.height
 
-    def can_place_building(self, building: Building, start_x: int, start_y: int) -> bool:
+    def can_place_building(self, building: Building, start_x: int, start_y: int,
+                           direction: Direction = Direction.UP) -> bool:
         w, h = building.size
+        # 模拟建筑横向摆放时长宽互换
+        if direction in (Direction.LEFT, Direction.RIGHT):
+            w, h = h, w
+
         for y in range(start_y, start_y + h):
             for x in range(start_x, start_x + w):
                 if not self.is_in_bounds(x, y) or self.grid[y][x] is not None:
                     return False
         return True
 
-    def place_building(self, building: Building, start_x: int, start_y: int) -> bool:
-        if not self.can_place_building(building, start_x, start_y):
+    def place_building(self, building: Building, start_x: int, start_y: int,
+                       direction: Direction = Direction.UP) -> bool:
+        if not self.can_place_building(building, start_x, start_y, direction):
             return False
+
+        # 根据方向翻转尺寸并设定对立面
+        if direction in (Direction.LEFT, Direction.RIGHT):
+            building.size = (building.size[1], building.size[0])
+        building.set_direction(direction)
+
         w, h = building.size
         for y in range(start_y, start_y + h):
             for x in range(start_x, start_x + w):
                 self.grid[y][x] = building
+
         building.anchor_pos = (start_x, start_y)
         self.buildings.append(building)
         return True
@@ -207,20 +220,36 @@ class GridMap:
         return 0.0
 
     def _push_building_outputs(self, building: Building):
-        """阶段 3: 将建筑产物推上管网"""
+        """阶段 3: 将建筑产物推上管网 (核心机制2：支持多端口均匀打散分配)"""
         if not hasattr(building, 'output_buffer'):
             building.output_buffer = {}
+        # 为建筑内部维护一个输出口的轮询状态机
+        if not hasattr(building, 'rr_index'):
+            building.rr_index = 0
 
         for mat, amount in list(building.output_buffer.items()):
-            if amount >= 1.0:
-                for out_pos in building.active_output_ports:
+            if amount >= 1.0 and building.active_output_ports:
+                consecutive_failures = 0
+                num_ports = len(building.active_output_ports)
+
+                # 只要物资还有剩，并且不是所有口子都塞满了，就持续进行轮询分配
+                while amount >= 1.0 and consecutive_failures < num_ports:
+                    out_pos = building.active_output_ports[building.rr_index]
                     target_cell = self._get_cell(out_pos[0], out_pos[1])
-                    pushed = self._push_to_cell(target_cell, mat, amount)
+
+                    # 每次最多只往一条传送带上挤 1.0 份，保证各条线均匀出货
+                    push_val = min(amount, 1.0)
+                    pushed = self._push_to_cell(target_cell, mat, push_val)
+
                     if pushed > 0:
                         building.output_buffer[mat] -= pushed
                         amount -= pushed
-                    if amount < 1.0:
-                        break
+                        consecutive_failures = 0
+                    else:
+                        consecutive_failures += 1
+
+                    # 索引移到下一个输出口，实现 Round-Robin
+                    building.rr_index = (building.rr_index + 1) % num_ports
 
     def _try_move_or_merge(self, transport: TransportComponent, target_cell) -> bool:
         if transport.current_item is None: return False

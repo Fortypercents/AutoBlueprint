@@ -4,12 +4,9 @@ from entities.material import MaterialType
 from entities.transport import Direction
 
 
-# ==========================================
-# [新增] 定义游戏内的物理体系
-# ==========================================
 class SystemType(Enum):
-    SYSTEM_A = auto()  # 体系A (如异星工厂：全向输入输出，允许机器贴脸直传)
-    SYSTEM_B = auto()  # 体系B (如戴森球/幸福工厂：固定出入口，必须用传送带/分拣器)
+    SYSTEM_A = auto()
+    SYSTEM_B = auto()
 
 
 class Building:
@@ -18,10 +15,8 @@ class Building:
         self.name = name
         self.size = size  # (width, height)
 
-        # 默认归属体系A
         self.system_type = SystemType.SYSTEM_A
 
-        # 1. 基础 IO 与生产配比属性
         self.needs_input = False
         self.input_materials: Dict[MaterialType, float] = {}
         self.needs_output = False
@@ -32,24 +27,38 @@ class Building:
         self.max_inventory: float = 20.0
         self.allowed_input_materials: List[MaterialType] = []
 
-        # 2. 端口特性声明 (将被子类覆盖)
         self.allows_omni_ports = True
         self.allows_direct_insertion = True
+
+        # 默认方向和出入面
+        self.direction = Direction.UP
         self.input_side = Direction.UP
         self.output_side = Direction.DOWN
 
-        # 3. 动态连接状态
         self.active_input_ports: List[Tuple[int, int]] = []
         self.active_output_ports: List[Tuple[int, int]] = []
+
+    def set_direction(self, direction: Direction):
+        """核心机制1：旋转建筑，自动设定对立面为输入输出口"""
+        self.direction = direction
+
+        if not self.allows_omni_ports:
+            # 假定旋转方向即为“输入口”的朝向，那么输出口必然在对面
+            self.input_side = direction
+            if direction == Direction.UP:
+                self.output_side = Direction.DOWN
+            elif direction == Direction.DOWN:
+                self.output_side = Direction.UP
+            elif direction == Direction.LEFT:
+                self.output_side = Direction.RIGHT
+            elif direction == Direction.RIGHT:
+                self.output_side = Direction.LEFT
 
     def reset_ports(self):
         self.active_input_ports.clear()
         self.active_output_ports.clear()
 
 
-# ==========================================
-# [新增] 派生类：体系 A 建筑 (全向、允许直连)
-# ==========================================
 class SystemABuilding(Building):
     def __init__(self, component_id: int, size: Tuple[int, int], name: str = "Unknown"):
         super().__init__(component_id, size, name)
@@ -58,15 +67,9 @@ class SystemABuilding(Building):
         self.allows_direct_insertion = True
 
 
-# ==========================================
-# [新增] 派生类：体系 B 建筑 (定向、禁止直连)
-# ==========================================
 class SystemBBuilding(Building):
     def __init__(self, component_id: int, size: Tuple[int, int], name: str = "Unknown"):
         super().__init__(component_id, size, name)
         self.system_type = SystemType.SYSTEM_B
         self.allows_omni_ports = False
         self.allows_direct_insertion = False
-        # 统一规定体系 B 的输入在上方，输出在下方
-        self.input_side = Direction.UP
-        self.output_side = Direction.DOWN

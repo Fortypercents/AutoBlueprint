@@ -79,6 +79,16 @@ class SystemAPipeBridge(SystemATransport):
         self.max_length = max_length
         self.end_pos = (0, 0)
 
+class SystemACrosser(SystemATransport):
+    def __init__(self, component_id: int, name: str = "SystemA交叉器"):
+        super().__init__(component_id, name)
+        self.supported_state = MaterialState.SOLID
+
+class SystemAPipeCrosser(SystemATransport):
+    def __init__(self, component_id: int, name: str = "SystemA管道交叉器"):
+        super().__init__(component_id, name)
+        self.supported_state = MaterialState.LIQUID
+
 
 # ==========================================
 # 体系 B: 严格定向、区分固液的现代物流体系
@@ -129,5 +139,15 @@ class SystemBBeltAccess(SystemBTransport):
 
 class SystemBPipeAccess(SystemBTransport):
     def __init__(self, component_id: int, name: str = "SystemB管道准入器"):
+        super().__init__(component_id, name)
+        self.supported_state = MaterialState.LIQUID
+
+class SystemBCrosser(SystemBTransport):
+    def __init__(self, component_id: int, name: str = "SystemB交叉器"):
+        super().__init__(component_id, name)
+        self.supported_state = MaterialState.SOLID
+
+class SystemBPipeCrosser(SystemBTransport):
+    def __init__(self, component_id: int, name: str = "SystemB管道交叉器"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID

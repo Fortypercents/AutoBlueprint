@@ -4,12 +4,16 @@ from entities.material import MaterialType
 
 # 引入我们刚刚重写的所有 SystemA 和 SystemB 运输元件
 from entities.transport import (
-    SystemABelt, SystemALogicRouter, SystemAOverflowGate, SystemABridge,
-    SystemAPipe, SystemAPipeRouter, SystemAPipeOverflowGate, SystemAPipeBridge,
+    SystemABelt, SystemAPipe,
+    SystemALogicRouter, SystemAPipeRouter,
+    SystemAOverflowGate, SystemAPipeOverflowGate,
+    SystemABridge, SystemAPipeBridge,
+    SystemACrosser, SystemAPipeCrosser,
     SystemBBelt, SystemBPipe,
     SystemBSplitter, SystemBPipeSplitter,
     SystemBMerger, SystemBPipeMerger,
-    SystemBBeltAccess, SystemBPipeAccess
+    SystemBBeltAccess, SystemBPipeAccess,
+    SystemBCrosser, SystemBPipeCrosser
 )
 
 BUILDING_CATALOG = {}
@@ -77,6 +81,10 @@ def get_transport_instance(component_id: int):
         bridge = SystemABridge(112, "基础传送桥(A)", min_length=1, max_length=3)
         bridge.max_capacity = 12.0
         return bridge
+    if component_id == 113:
+        crosser = SystemACrosser(113, "交叉器(A)")
+        crosser.max_capacity = 12.0
+        return crosser
 
     # ---------------- 体系 A (液体) ----------------
     if component_id == 151:
@@ -95,6 +103,10 @@ def get_transport_instance(component_id: int):
         bridge = SystemAPipeBridge(162, "基础管道桥(A)", min_length=1, max_length=3)
         bridge.max_capacity = 12.0
         return bridge
+    if component_id == 163:
+        crosser = SystemAPipeCrosser(163, "管道交叉器(A)")
+        crosser.max_capacity = 12.0
+        return crosser
 
     # ---------------- 体系 B (基础线缆) ----------------
     if component_id == 301:
@@ -119,6 +131,10 @@ def get_transport_instance(component_id: int):
         access = SystemBBeltAccess(313, "传送准入器(B)")
         access.max_capacity = 1.0
         return access
+    if component_id == 314:
+        crosser = SystemBCrosser(314, "交叉器(B)")
+        crosser.max_capacity = 1.0
+        return crosser
 
     # ---------------- 体系 B (液体物流元件) ----------------
     if component_id == 321:
@@ -133,6 +149,10 @@ def get_transport_instance(component_id: int):
         access = SystemBPipeAccess(323, "管道准入器(B)")
         access.max_capacity = 1.0
         return access
+    if component_id == 324:
+        crosser = SystemBPipeCrosser(324, "管道交叉器(B)")
+        crosser.max_capacity = 1.0
+        return crosser
 
     raise ValueError(f"未知的运输组件 ID: {component_id}")
 
