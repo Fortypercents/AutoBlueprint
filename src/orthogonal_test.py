@@ -1,0 +1,303 @@
+import time
+import sys
+import os
+from typing import Dict, Tuple, Any
+
+# 确保能够导入 src 下的模块
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from entities.material import MaterialType
+from entities.registry import get_transport_instance
+from entities.transport import Direction, TransportComponent
+from environment.grid_map import GridMap
+from agents.base_agent import BaseAgent
+
+
+class CascadingBusAgent(BaseAgent):
+    """
+    层级化瀑布流总线智能体 (Tier-Based Cascading Bus Agent)
+    """
+
+    def __init__(self, target_outputs, ext_in=(0, 2), ext_out=(33, 22)):
+        super().__init__(target_outputs)
+        self.ext_in = ext_in
+        self.ext_out = ext_out
+
+        # 默认使用体系A的物流组件
+        self.belt_id = 102
+        self.router_id = 110
+
+    def _sort_buildings_by_dependency(self):
+        """按层级 (Tier) 批量结算依赖关系，防止同级机器串联"""
+        tiers = []
+        pending = list(self.required_buildings)
+        available_mats = set(self.raw_material_inputs.keys())
+
+        while pending:
+            tier_buildings = [b for b in pending if all(mat in available_mats for mat in b.input_materials)]
+
+            if not tier_buildings:
+                print("⚠️ 警告：检测到配方死锁或缺失前置原料！")
+                tiers.append(pending)
+                break
+
+            tiers.append(tier_buildings)
+
+            for b in tier_buildings:
+                pending.remove(b)
+
+            for b in tier_buildings:
+                for out_mat in b.output_materials:
+                    available_mats.add(out_mat)
+
+        return tiers
+
+    def optimize(self, env: GridMap):
+        print("\n【Agent 思考中】开始解析多级生产链路拓扑关系...")
+        self.calculate_production_chain()
+
+        tiers = self._sort_buildings_by_dependency()
+
+        for i, tier in enumerate(tiers):
+            print(f" -> 层级 (Tier {i}): " + " | ".join([b.name for b in tier]))
+
+        # === 开始层级化瀑布流铺设 ===
+        current_bus_y = self.ext_in[1]
+        last_out_x, last_out_y = self.ext_in
+        current_x = self.ext_in[0] + 3
+
+        for tier_idx, tier in enumerate(tiers):
+            placed_b_info = []
+            max_h = 0
+
+            # 1. 并排摆放该层级的所有机器
+            for b in tier:
+                bx = current_x
+                by = current_bus_y + 2
+
+                if not env.place_building(b, bx, by):
+                    print(f"❌ 警告：无法在 ({bx}, {by}) 放置 {b.name}，地图空间可能不足！")
+                    continue
+
+                # 【重要修复】：去掉了这里过早的 env.update_connections(b)
+
+                bw, bh = b.size
+                px = bx + bw // 2
+                max_h = max(max_h, bh)
+
+                placed_b_info.append((b, px, by, bw, bh))
+                current_x += bw + 3
+
+            if not placed_b_info:
+                continue
+
+            first_px = placed_b_info[0][1]
+            last_px = placed_b_info[-1][1]
+
+            # 收集所有需要放分配器的 X 坐标，防止被普通传送带提前占位
+            splitter_xs = [p_info[1] for p_info in placed_b_info]
+
+            # --- 2. 铺设该层的【输入横向总线】 ---
+            start_bus_x = min(last_out_x, first_px)
+            for x in range(start_bus_x, last_px):
+                if x in splitter_xs:
+                    continue  # 预留空位给分配器
+                if env._get_cell(x, current_bus_y) is None:
+                    belt = get_transport_instance(self.belt_id)
+                    env.place_transport(belt, x, current_bus_y, Direction.RIGHT)
+
+            # 把上一级的输出口，垂直平滑接驳到本层的输入总线
+            if last_out_y < current_bus_y:
+                for y in range(last_out_y + 1, current_bus_y):
+                    if env._get_cell(last_out_x, y) is None:
+                        belt = get_transport_instance(self.belt_id)
+                        env.place_transport(belt, last_out_x, y, Direction.DOWN)
+
+            # 将总线用分配器分流怼入该层的各个建筑
+            for b, px, by, bw, bh in placed_b_info:
+                splitter = get_transport_instance(self.router_id)
+                env.place_transport(splitter, px, current_bus_y, Direction.RIGHT)
+
+                for y in range(current_bus_y + 1, by):
+                    belt = get_transport_instance(self.belt_id)
+                    env.place_transport(belt, px, y, Direction.DOWN)
+
+            # --- 3. 铺设该层的【输出横向总线】 ---
+            out_bus_y = current_bus_y + 2 + max_h + 1
+
+            for b, px, by, bw, bh in placed_b_info:
+                for y in range(by + bh, out_bus_y):
+                    belt = get_transport_instance(self.belt_id)
+                    env.place_transport(belt, px, y, Direction.DOWN)
+
+                merger = get_transport_instance(self.router_id)
+                env.place_transport(merger, px, out_bus_y, Direction.RIGHT)
+
+            for x in range(first_px + 1, last_px):
+                if env._get_cell(x, out_bus_y) is None:
+                    belt = get_transport_instance(self.belt_id)
+                    env.place_transport(belt, x, out_bus_y, Direction.RIGHT)
+
+            # 4. 在当前层输出总线的最末端，放置一个向下的皮带
+            final_out_x = last_px + 1
+            belt = get_transport_instance(self.belt_id)
+            env.place_transport(belt, final_out_x, out_bus_y, Direction.DOWN)
+
+            # 更新游标
+            last_out_x = final_out_x
+            last_out_y = out_bus_y
+            current_bus_y = out_bus_y + 2
+
+        # === 终点连接 ===
+        out_x, out_y = self.ext_out
+        for y in range(last_out_y + 1, out_y):
+            belt = get_transport_instance(self.belt_id)
+            env.place_transport(belt, last_out_x, y, Direction.DOWN)
+
+        belt = get_transport_instance(self.belt_id)
+        env.place_transport(belt, last_out_x, out_y, Direction.RIGHT)
+
+        for x in range(last_out_x + 1, out_x + 1):
+            belt = get_transport_instance(self.belt_id)
+            env.place_transport(belt, x, out_y, Direction.RIGHT)
+
+    def render_blueprint(self, env: GridMap, tick: int = 0, current_yield: Dict = None):
+        yield_str = ", ".join([f"[{getattr(m, 'name', str(m))}]: {v}" for m, v in (current_yield or {}).items()])
+
+        # 动态映射英文字母给建筑，并生成图例
+        b_legend = {}
+        letter_char = 'A'
+        for b in env.buildings:
+            if b.name not in b_legend:
+                b_legend[b.name] = letter_char
+                letter_char = chr(ord(letter_char) + 1)
+
+        legend_str = " | ".join([f"[{v}] {k}" for k, v in b_legend.items()])
+
+        print("\n" * 3)
+        print(f"=== 🏭 层级瀑布流水线自动打样 [Tick {tick:03d}] ===")
+        print(f"终端收集: {yield_str}")
+        print(f"建筑图例: {legend_str}")
+        print("=" * 64)
+
+        dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
+        for y in range(env.height):
+            row_str = ""
+            for x in range(env.width):
+                cell = env._get_cell(x, y)
+                if cell is None:
+                    row_str += " . "
+                elif hasattr(cell, 'size'):
+                    letter = b_legend.get(cell.name, '?')
+                    row_str += f"[{letter}]"
+                elif isinstance(cell, TransportComponent):
+                    c_name = type(cell).__name__
+                    is_router = "Router" in c_name or "Splitter" in c_name or "Merger" in c_name
+                    direction = getattr(cell, 'direction', Direction.RIGHT)
+                    dir_char = dir_symbols.get(direction, "*")
+
+                    item = getattr(cell, 'current_item', None)
+                    if item is not None:
+                        amt = int(item[1]) if isinstance(item, tuple) else 1
+                        base_char = "S" if is_router else dir_char
+                        # 【重要修改】：不再显示字母缩写，仅用 01>, 02v 表示数量和方向
+                        row_str += f"{amt:02d}{base_char}"
+                    else:
+                        row_str += f"[S]" if is_router else f" {dir_char} "
+                else:
+                    row_str += "[?]"
+            print(f"{y:02d} {row_str}")
+        print("=========================================================================")
+
+
+def run_test():
+    target_outputs = {MaterialType.IRON_INGOT: 2.0}
+
+    agent = CascadingBusAgent(target_outputs, ext_in=(0, 2), ext_out=(35, 22))
+    env = GridMap(36, 26)
+
+    # 1. 执行Agent布局优化 (铺设所有建筑和传送带)
+    agent.optimize(env)
+
+    # 2. 【重要修复】：等蓝图全画完后，再统一激活建筑接口！
+    for b in env.buildings:
+        env.update_connections(b)
+
+    required_inputs = agent.raw_material_inputs
+    main_input_mat = list(required_inputs.keys())[0] if required_inputs else MaterialType.IRON_ORE
+
+    print("=== ⚙️ 开始物理仿真 (2 铁板 = 1 铁块 的完美闭环) ===")
+    collected_yields = {MaterialType.IRON_INGOT: 0.0}
+    ticks_to_simulate = 100
+
+    for tick in range(1, ticks_to_simulate + 1):
+        # A. 从源头总注入矿石
+        in_cell = env._get_cell(*agent.ext_in)
+        if isinstance(in_cell, TransportComponent):
+            if getattr(in_cell, 'current_item', None) is None:
+                in_cell.current_item = (main_input_mat, 12.0)
+
+        # B. 机器消化与制造
+        for b in env.buildings:
+            if not hasattr(b, 'inventory'): b.inventory = {}
+
+            # 吃料
+            for px, py in b.active_input_ports:
+                port_cell = env._get_cell(px, py)
+                if port_cell and getattr(port_cell, 'current_item', None):
+                    item = port_cell.current_item
+                    mat = item[0] if isinstance(item, tuple) else item
+                    amt = item[1] if isinstance(item, tuple) else 1.0
+
+                    # 使用更严谨的输入配方键值检查
+                    if mat in b.input_materials:
+                        current_inv = b.inventory.get(mat, 0)
+                        max_inv = b.max_inventory
+                        if current_inv < max_inv:
+                            take_amt = min(amt, max_inv - current_inv)
+                            b.inventory[mat] = current_inv + take_amt
+                            port_cell.current_item = (mat, amt - take_amt) if amt - take_amt > 0 else None
+
+            # 加工
+            can_produce = True
+            for req_mat, req_amt in b.input_materials.items():
+                if b.inventory.get(req_mat, 0) < req_amt:
+                    can_produce = False
+                    break
+
+            if can_produce:
+                for req_mat, req_amt in b.input_materials.items():
+                    b.inventory[req_mat] -= req_amt
+                for out_mat, out_amt in b.output_materials.items():
+                    b.inventory[out_mat] = b.inventory.get(out_mat, 0) + out_amt
+
+            # 吐料
+            for px, py in b.active_output_ports:
+                port_cell = env._get_cell(px, py)
+                if port_cell and port_cell.current_item is None:
+                    for out_mat, out_amt in b.output_materials.items():
+                        if b.inventory.get(out_mat, 0) >= 1.0:
+                            port_cell.current_item = (out_mat, 1.0)
+                            b.inventory[out_mat] -= 1.0
+                            break
+
+        # C. 物理引擎 Tick
+        env.tick()
+
+        # D. 终点收集铁块 (IRON_INGOT)
+        out_cell = env._get_cell(*agent.ext_out)
+        out_item = getattr(out_cell, 'current_item', None)
+        if out_item is not None:
+            mat, amt = out_item if isinstance(out_item, tuple) else (out_item, 1.0)
+            if mat in collected_yields:
+                collected_yields[mat] += amt
+            out_cell.current_item = None
+
+        agent.render_blueprint(env, tick, collected_yields)
+        time.sleep(0.08)
+
+    print(f"\n✅ 模拟结束！Agent 成功推断出并联关系，共产出 {collected_yields[MaterialType.IRON_INGOT]} 个铁块！")
+
+
+if __name__ == "__main__":
+    run_test()

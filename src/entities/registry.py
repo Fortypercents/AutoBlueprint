@@ -30,6 +30,15 @@ furnace.max_inventory = 10.0
 furnace.allowed_input_materials = [MaterialType.IRON_ORE]
 BUILDING_CATALOG[201] = furnace
 
+press = SystemABuilding(component_id=202, size=(3, 3), name="压制机")
+press.needs_input = True
+press.input_materials = {MaterialType.IRON_PLATE: 2.0}
+press.needs_output = True
+press.output_materials = {MaterialType.IRON_INGOT: 1.0}
+press.max_inventory = 10.0
+press.allowed_input_materials = [MaterialType.IRON_PLATE]
+BUILDING_CATALOG[202] = press
+
 
 # ==========================================
 # 体系 B 建筑注册 (严格体系：定向出入、禁止直连)
@@ -53,9 +62,6 @@ seed_extractor.allowed_input_materials = [MaterialType.APPLE]
 BUILDING_CATALOG[402] = seed_extractor
 
 
-# ==========================================
-# 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)
-# ==========================================
 # ==========================================
 # 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)
 # ==========================================

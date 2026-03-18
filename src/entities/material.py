@@ -12,6 +12,7 @@ class MaterialType(Enum):
     # ==========================================
     IRON_ORE = auto()
     IRON_PLATE = auto()
+    IRON_INGOT = auto()
 
     # ==========================================
     # 1. 原料 (Raw Materials)

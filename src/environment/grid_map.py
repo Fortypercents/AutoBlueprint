@@ -178,9 +178,26 @@ class GridMap:
             return self._get_cell(x, y - 1), self._get_cell(x, y + 1)
 
     def _apply_next_tick_states(self):
+        """阶段 4: 应用下一帧状态"""
         for transport in self.transports:
-            if hasattr(transport, 'next_tick_item') and transport.next_tick_item is not None:
-                transport.current_item = transport.next_tick_item
+            next_item = getattr(transport, 'next_tick_item', None)
+            if next_item is not None:
+                n_mat = next_item[0] if isinstance(next_item, tuple) else next_item
+                n_amt = next_item[1] if isinstance(next_item, tuple) else 1.0
+
+                curr_item = getattr(transport, 'current_item', None)
+                if curr_item is not None:
+                    c_mat = curr_item[0] if isinstance(curr_item, tuple) else curr_item
+                    c_amt = curr_item[1] if isinstance(curr_item, tuple) else 1.0
+
+                    # BUG FIX: 将收件箱的物品 累加 到现有物品上，而不是覆盖！
+                    if c_mat == n_mat:
+                        transport.current_item = (n_mat, c_amt + n_amt)
+                    else:
+                        transport.current_item = (n_mat, n_amt)
+                else:
+                    transport.current_item = (n_mat, n_amt)
+
                 transport.next_tick_item = None
 
     # ==========================================
@@ -194,30 +211,39 @@ class GridMap:
         # 【核心新增】：固液分离严格校验
         supported_state = getattr(target_cell, 'supported_state', None)
         if supported_state is not None:
-            # 安全获取形态。如果物料本身是一个 Enum（未实例化），尝试向下兼容读取
             mat_state = getattr(mat, 'state', None)
             if mat_state is not None and mat_state != supported_state:
                 return 0.0  # 物理状态不兼容，彻底拦截（如水进传送带）
 
-        target_item = getattr(target_cell, 'next_tick_item', None) or getattr(target_cell, 'current_item', None)
-        capacity = max(1.0, getattr(target_cell, 'max_capacity', 1.0))
+        # 分别解析现有的物品和下一帧缓冲区的物品
+        curr_item = getattr(target_cell, 'current_item', None)
+        next_item = getattr(target_cell, 'next_tick_item', None)
 
-        if target_item is None:
-            push_amt = min(amt, capacity)
-            target_cell.next_tick_item = (mat, push_amt)
-            return push_amt
+        curr_mat = curr_item[0] if isinstance(curr_item, tuple) else curr_item if curr_item else None
+        next_mat = next_item[0] if isinstance(next_item, tuple) else next_item if next_item else None
 
-        t_mat = target_item[0] if isinstance(target_item, tuple) else target_item
-        t_amt = target_item[1] if isinstance(target_item, tuple) else 1.0
+        # 物质种类冲突校验 (不能混装)
+        if curr_mat is not None and curr_mat != mat:
+            return 0.0
+        if next_mat is not None and next_mat != mat:
+            return 0.0
 
-        if t_mat == mat:
-            space_left = capacity - t_amt
-            if space_left > 0:
-                push_amt = min(amt, space_left)
-                target_cell.next_tick_item = (mat, t_amt + push_amt)
-                return push_amt
+        # 计算现有量和待接收量
+        curr_amt = curr_item[1] if isinstance(curr_item, tuple) else 1.0 if curr_item else 0.0
+        next_amt = next_item[1] if isinstance(next_item, tuple) else 1.0 if next_item else 0.0
 
-        return 0.0
+        capacity = getattr(target_cell, 'max_capacity', 1.0)
+
+        # 剩余空间 = 总容量 - (现在肚子里的 + 刚刚在这个tick已经被别人塞进来的)
+        space_left = capacity - (curr_amt + next_amt)
+
+        if space_left <= 0:
+            return 0.0
+
+        push_amt = min(amt, space_left)
+        # BUG FIX: next_tick_item 仅仅作为"收件箱"，只记录新增的量！
+        target_cell.next_tick_item = (mat, next_amt + push_amt)
+        return push_amt
 
     def _push_building_outputs(self, building: Building):
         """阶段 3: 将建筑产物推上管网 (核心机制2：支持多端口均匀打散分配)"""
