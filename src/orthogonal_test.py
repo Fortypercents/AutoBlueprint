@@ -79,8 +79,6 @@ class CascadingBusAgent(BaseAgent):
                     print(f"❌ 警告：无法在 ({bx}, {by}) 放置 {b.name}，地图空间可能不足！")
                     continue
 
-                # 【重要修复】：去掉了这里过早的 env.update_connections(b)
-
                 bw, bh = b.size
                 px = bx + bw // 2
                 max_h = max(max_h, bh)
@@ -93,50 +91,56 @@ class CascadingBusAgent(BaseAgent):
 
             first_px = placed_b_info[0][1]
             last_px = placed_b_info[-1][1]
-
-            # 收集所有需要放分配器的 X 坐标，防止被普通传送带提前占位
             splitter_xs = [p_info[1] for p_info in placed_b_info]
 
-            # --- 2. 铺设该层的【输入横向总线】 ---
-            start_bus_x = min(last_out_x, first_px)
-            for x in range(start_bus_x, last_px):
-                if x in splitter_xs:
-                    continue  # 预留空位给分配器
-                if env._get_cell(x, current_bus_y) is None:
-                    belt = get_transport_instance(self.belt_id)
-                    env.place_transport(belt, x, current_bus_y, Direction.RIGHT)
-
-            # 把上一级的输出口，垂直平滑接驳到本层的输入总线
+            # --- 2. 铺设该层的【输入横向总线】及分配器 (修复物理拓扑顺序) ---
+            # 首先：把上一级的输出口，垂直平滑接驳到本层的输入总线(上游最先放)
             if last_out_y < current_bus_y:
                 for y in range(last_out_y + 1, current_bus_y):
                     if env._get_cell(last_out_x, y) is None:
                         belt = get_transport_instance(self.belt_id)
                         env.place_transport(belt, last_out_x, y, Direction.DOWN)
 
-            # 将总线用分配器分流怼入该层的各个建筑
-            for b, px, by, bw, bh in placed_b_info:
-                splitter = get_transport_instance(self.router_id)
-                env.place_transport(splitter, px, current_bus_y, Direction.RIGHT)
+            start_bus_x = min(last_out_x, first_px)
+            # 自左向右严格按照上游->下游的顺序放置
+            for x in range(start_bus_x, last_px + 1):
+                if x in splitter_xs:
+                    b_info = next(info for info in placed_b_info if info[1] == x)
+                    b, px, by, bw, bh = b_info
 
-                for y in range(current_bus_y + 1, by):
-                    belt = get_transport_instance(self.belt_id)
-                    env.place_transport(belt, px, y, Direction.DOWN)
+                    # 放置分配器
+                    splitter = get_transport_instance(self.router_id)
+                    env.place_transport(splitter, px, current_bus_y, Direction.RIGHT)
 
-            # --- 3. 铺设该层的【输出横向总线】 ---
+                    # 顺流放置进入机器的支线
+                    for y in range(current_bus_y + 1, by):
+                        belt = get_transport_instance(self.belt_id)
+                        env.place_transport(belt, px, y, Direction.DOWN)
+                else:
+                    if env._get_cell(x, current_bus_y) is None:
+                        belt = get_transport_instance(self.belt_id)
+                        env.place_transport(belt, x, current_bus_y, Direction.RIGHT)
+
+            # --- 3. 铺设该层的【输出横向总线】及汇流器 (修复物理拓扑顺序) ---
             out_bus_y = current_bus_y + 2 + max_h + 1
 
-            for b, px, by, bw, bh in placed_b_info:
-                for y in range(by + bh, out_bus_y):
-                    belt = get_transport_instance(self.belt_id)
-                    env.place_transport(belt, px, y, Direction.DOWN)
+            for x in range(first_px, last_px + 1):
+                if x in splitter_xs:
+                    b_info = next(info for info in placed_b_info if info[1] == x)
+                    b, px, by, bw, bh = b_info
 
-                merger = get_transport_instance(self.router_id)
-                env.place_transport(merger, px, out_bus_y, Direction.RIGHT)
+                    # 从机器出来的支线 (上游)
+                    for y in range(by + bh, out_bus_y):
+                        belt = get_transport_instance(self.belt_id)
+                        env.place_transport(belt, px, y, Direction.DOWN)
 
-            for x in range(first_px + 1, last_px):
-                if env._get_cell(x, out_bus_y) is None:
-                    belt = get_transport_instance(self.belt_id)
-                    env.place_transport(belt, x, out_bus_y, Direction.RIGHT)
+                    # 汇流器
+                    merger = get_transport_instance(self.router_id)
+                    env.place_transport(merger, px, out_bus_y, Direction.RIGHT)
+                else:
+                    if env._get_cell(x, out_bus_y) is None:
+                        belt = get_transport_instance(self.belt_id)
+                        env.place_transport(belt, x, out_bus_y, Direction.RIGHT)
 
             # 4. 在当前层输出总线的最末端，放置一个向下的皮带
             final_out_x = last_px + 1
@@ -164,7 +168,6 @@ class CascadingBusAgent(BaseAgent):
     def render_blueprint(self, env: GridMap, tick: int = 0, current_yield: Dict = None):
         yield_str = ", ".join([f"[{getattr(m, 'name', str(m))}]: {v}" for m, v in (current_yield or {}).items()])
 
-        # 动态映射英文字母给建筑，并生成图例
         b_legend = {}
         letter_char = 'A'
         for b in env.buildings:
@@ -200,7 +203,6 @@ class CascadingBusAgent(BaseAgent):
                     if item is not None:
                         amt = int(item[1]) if isinstance(item, tuple) else 1
                         base_char = "S" if is_router else dir_char
-                        # 【重要修改】：不再显示字母缩写，仅用 01>, 02v 表示数量和方向
                         row_str += f"{amt:02d}{base_char}"
                     else:
                         row_str += f"[S]" if is_router else f" {dir_char} "
@@ -216,10 +218,8 @@ def run_test():
     agent = CascadingBusAgent(target_outputs, ext_in=(0, 2), ext_out=(35, 22))
     env = GridMap(36, 26)
 
-    # 1. 执行Agent布局优化 (铺设所有建筑和传送带)
     agent.optimize(env)
 
-    # 2. 【重要修复】：等蓝图全画完后，再统一激活建筑接口！
     for b in env.buildings:
         env.update_connections(b)
 
@@ -231,60 +231,42 @@ def run_test():
     ticks_to_simulate = 100
 
     for tick in range(1, ticks_to_simulate + 1):
-        # A. 从源头总注入矿石
+        # A. 从源头注入矿石 (修复：支持满载持续注入，防空断流)
         in_cell = env._get_cell(*agent.ext_in)
         if isinstance(in_cell, TransportComponent):
-            if getattr(in_cell, 'current_item', None) is None:
+            target_item = getattr(in_cell, 'current_item', None)
+            if target_item is None:
                 in_cell.current_item = (main_input_mat, 12.0)
+            elif isinstance(target_item, tuple):
+                mat, amt = target_item
+                if mat == main_input_mat and amt < 12.0:
+                    in_cell.current_item = (main_input_mat, min(12.0, amt + 12.0))
 
-        # B. 机器消化与制造
-        for b in env.buildings:
-            if not hasattr(b, 'inventory'): b.inventory = {}
+                # B. 机器消化与制造 (修复：仅保留吃料，将加工和吐料交还给底层引擎)
+                for b in env.buildings:
+                    if not hasattr(b, 'inventory'):
+                        b.inventory = {}
 
-            # 吃料
-            for px, py in b.active_input_ports:
-                port_cell = env._get_cell(px, py)
-                if port_cell and getattr(port_cell, 'current_item', None):
-                    item = port_cell.current_item
-                    mat = item[0] if isinstance(item, tuple) else item
-                    amt = item[1] if isinstance(item, tuple) else 1.0
+                    # 吃料
+                    for px, py in b.active_input_ports:
+                        port_cell = env._get_cell(px, py)
+                        if port_cell and getattr(port_cell, 'current_item', None):
+                            item = port_cell.current_item
+                            mat = item[0] if isinstance(item, tuple) else item
+                            amt = item[1] if isinstance(item, tuple) else 1.0
 
-                    # 使用更严谨的输入配方键值检查
-                    if mat in b.input_materials:
-                        current_inv = b.inventory.get(mat, 0)
-                        max_inv = b.max_inventory
-                        if current_inv < max_inv:
-                            take_amt = min(amt, max_inv - current_inv)
-                            b.inventory[mat] = current_inv + take_amt
-                            port_cell.current_item = (mat, amt - take_amt) if amt - take_amt > 0 else None
+                            if mat in b.input_materials:
+                                current_inv = b.inventory.get(mat, 0)
+                                max_inv = b.max_inventory
+                                if current_inv < max_inv:
+                                    take_amt = min(amt, max_inv - current_inv)
+                                    b.inventory[mat] = current_inv + take_amt
+                                    port_cell.current_item = (mat, amt - take_amt) if amt - take_amt > 0 else None
 
-            # 加工
-            can_produce = True
-            for req_mat, req_amt in b.input_materials.items():
-                if b.inventory.get(req_mat, 0) < req_amt:
-                    can_produce = False
-                    break
+                # C. 物理引擎 Tick (引擎会自动处理生产和产物弹出)
+                env.tick()
 
-            if can_produce:
-                for req_mat, req_amt in b.input_materials.items():
-                    b.inventory[req_mat] -= req_amt
-                for out_mat, out_amt in b.output_materials.items():
-                    b.inventory[out_mat] = b.inventory.get(out_mat, 0) + out_amt
-
-            # 吐料
-            for px, py in b.active_output_ports:
-                port_cell = env._get_cell(px, py)
-                if port_cell and port_cell.current_item is None:
-                    for out_mat, out_amt in b.output_materials.items():
-                        if b.inventory.get(out_mat, 0) >= 1.0:
-                            port_cell.current_item = (out_mat, 1.0)
-                            b.inventory[out_mat] -= 1.0
-                            break
-
-        # C. 物理引擎 Tick
-        env.tick()
-
-        # D. 终点收集铁块 (IRON_INGOT)
+        # D. 终点收集
         out_cell = env._get_cell(*agent.ext_out)
         out_item = getattr(out_cell, 'current_item', None)
         if out_item is not None:

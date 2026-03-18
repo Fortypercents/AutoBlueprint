@@ -64,11 +64,12 @@ class OrthogonalBusAgent(BaseAgent):
                 px = bx + bw // 2
 
                 # 连线：总线 -> 分配器 -> 机器输入
-                # 水平总线
-                for x in range(start_x, px + 1):
+                # 水平总线 (修改点：去掉 + 1，避免占用了 px 这个属于分配器的格子)
+                for x in range(start_x, px):
+                    # 如果这格还没东西，才放传送带 (利用底层跳过机制)
                     env.place_transport(get_transport_instance(self.belt_id), x, next_input_bus_y, Direction.RIGHT)
 
-                # 分配器
+                # 分配器 (现在它可以安全地放置在空出的 px 位置了)
                 env.place_transport(get_transport_instance(self.splitter_id), px, next_input_bus_y, Direction.RIGHT)
 
                 # 垂直支线进入机器
