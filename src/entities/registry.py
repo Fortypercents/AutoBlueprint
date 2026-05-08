@@ -61,6 +61,128 @@ seed_extractor.max_inventory = 20.0
 seed_extractor.allowed_input_materials = [MaterialType.APPLE]
 BUILDING_CATALOG[402] = seed_extractor
 
+# ---------------- 1. 精炼炉 (3x3) ----------------
+# 源石 -> 晶体外壳
+refinery_ori = SystemBBuilding(component_id=511, size=(3, 3), name="精炼炉(源石)")
+refinery_ori.needs_input, refinery_ori.needs_output = True, True
+refinery_ori.input_materials = {MaterialType.ORIGINIUM: 1.0}
+refinery_ori.output_materials = {MaterialType.CRYSTAL_SHELL: 1.0}
+refinery_ori.allowed_input_materials = [MaterialType.ORIGINIUM]
+refinery_ori.max_inventory = 50.0
+BUILDING_CATALOG[511] = refinery_ori
+
+# 紫晶 -> 紫晶纤维
+refinery_ame = SystemBBuilding(component_id=512, size=(3, 3), name="精炼炉(紫晶)")
+refinery_ame.needs_input, refinery_ame.needs_output = True, True
+refinery_ame.input_materials = {MaterialType.AMETHYST: 1.0}
+refinery_ame.output_materials = {MaterialType.AMETHYST_FIBER: 1.0}
+refinery_ame.allowed_input_materials = [MaterialType.AMETHYST]
+refinery_ame.max_inventory = 50.0
+BUILDING_CATALOG[512] = refinery_ame
+
+# 蓝铁 -> 蓝铁块
+refinery_iron = SystemBBuilding(component_id=513, size=(3, 3), name="精炼炉(蓝铁)")
+refinery_iron.needs_input, refinery_iron.needs_output = True, True
+refinery_iron.input_materials = {MaterialType.BLUE_IRON: 1.0}
+refinery_iron.output_materials = {MaterialType.BLUE_IRON_INGOT: 1.0}
+refinery_iron.allowed_input_materials = [MaterialType.BLUE_IRON]
+refinery_iron.max_inventory = 50.0
+BUILDING_CATALOG[513] = refinery_iron
+
+# ---------------- 2. 粉碎机 (3x3) ----------------
+# 晶体外壳 -> 外壳粉末
+crusher_shell = SystemBBuilding(component_id=521, size=(3, 3), name="粉碎机(外壳)")
+crusher_shell.needs_input, crusher_shell.needs_output = True, True
+crusher_shell.input_materials = {MaterialType.CRYSTAL_SHELL: 1.0}
+crusher_shell.output_materials = {MaterialType.CRYSTAL_SHELL_POWDER: 2.0}
+crusher_shell.allowed_input_materials = [MaterialType.CRYSTAL_SHELL]
+crusher_shell.max_inventory = 50.0
+BUILDING_CATALOG[521] = crusher_shell
+
+# 紫晶纤维 -> 紫晶粉
+crusher_ame = SystemBBuilding(component_id=522, size=(3, 3), name="粉碎机(紫晶)")
+crusher_ame.needs_input, crusher_ame.needs_output = True, True
+crusher_ame.input_materials = {MaterialType.AMETHYST_FIBER: 1.0}
+crusher_ame.output_materials = {MaterialType.AMETHYST_POWDER: 2.0}
+crusher_ame.allowed_input_materials = [MaterialType.AMETHYST_FIBER]
+crusher_ame.max_inventory = 50.0
+BUILDING_CATALOG[522] = crusher_ame
+
+# 蓝铁块 -> 蓝铁粉
+crusher_iron = SystemBBuilding(component_id=523, size=(3, 3), name="粉碎机(蓝铁)")
+crusher_iron.needs_input, crusher_iron.needs_output = True, True
+crusher_iron.input_materials = {MaterialType.BLUE_IRON_INGOT: 1.0}
+crusher_iron.output_materials = {MaterialType.BLUE_IRON_POWDER: 2.0}
+crusher_iron.allowed_input_materials = [MaterialType.BLUE_IRON_INGOT]
+crusher_iron.max_inventory = 50.0
+BUILDING_CATALOG[523] = crusher_iron
+
+# 源石 -> 源石粉 (直通配方)
+crusher_ori = SystemBBuilding(component_id=524, size=(3, 3), name="粉碎机(源石)")
+crusher_ori.needs_input, crusher_ori.needs_output = True, True
+crusher_ori.input_materials = {MaterialType.ORIGINIUM: 1.0}
+crusher_ori.output_materials = {MaterialType.ORIGINIUM_POWDER: 2.0}
+crusher_ori.allowed_input_materials = [MaterialType.ORIGINIUM]
+crusher_ori.max_inventory = 50.0
+BUILDING_CATALOG[524] = crusher_ori
+
+# ---------------- 3. 配件机 (3x3) ----------------
+# 紫晶纤维 -> 紫晶零件
+part_ame = SystemBBuilding(component_id=531, size=(3, 3), name="配件机(紫晶)")
+part_ame.needs_input, part_ame.needs_output = True, True
+part_ame.input_materials = {MaterialType.AMETHYST_FIBER: 1.0}
+part_ame.output_materials = {MaterialType.AMETHYST_PART: 1.0}
+part_ame.allowed_input_materials = [MaterialType.AMETHYST_FIBER]
+part_ame.max_inventory = 50.0
+BUILDING_CATALOG[531] = part_ame
+
+# 蓝铁块 -> 蓝铁零件
+part_iron = SystemBBuilding(component_id=532, size=(3, 3), name="配件机(蓝铁)")
+part_iron.needs_input, part_iron.needs_output = True, True
+part_iron.input_materials = {MaterialType.BLUE_IRON_INGOT: 1.0}
+part_iron.output_materials = {MaterialType.BLUE_IRON_PART: 1.0}
+part_iron.allowed_input_materials = [MaterialType.BLUE_IRON_INGOT]
+part_iron.max_inventory = 50.0
+BUILDING_CATALOG[532] = part_iron
+
+# ---------------- 4. 压制机 (3x3) ----------------
+# 紫晶纤维 -> 紫晶瓶
+press_ame = SystemBBuilding(component_id=541, size=(3, 3), name="压制机(紫晶瓶)")
+press_ame.needs_input, press_ame.needs_output = True, True
+press_ame.input_materials = {MaterialType.AMETHYST_FIBER: 2.0}
+press_ame.output_materials = {MaterialType.AMETHYST_BOTTLE: 1.0}
+press_ame.allowed_input_materials = [MaterialType.AMETHYST_FIBER]
+press_ame.max_inventory = 50.0
+BUILDING_CATALOG[541] = press_ame
+
+# 蓝铁块 -> 蓝铁瓶
+press_iron = SystemBBuilding(component_id=542, size=(3, 3), name="压制机(蓝铁瓶)")
+press_iron.needs_input, press_iron.needs_output = True, True
+press_iron.input_materials = {MaterialType.BLUE_IRON_INGOT: 2.0}
+press_iron.output_materials = {MaterialType.BLUE_IRON_BOTTLE: 1.0}
+press_iron.allowed_input_materials = [MaterialType.BLUE_IRON_INGOT]
+press_iron.max_inventory = 50.0
+BUILDING_CATALOG[542] = press_iron
+
+# ---------------- 5. 封装机 (5x3) 多输入多输出 ----------------
+# 5紫晶零件 + 10源石粉末 = 低容谷地电池
+pack_low = SystemBBuilding(component_id=551, size=(5, 3), name="封装机(低容)")
+pack_low.needs_input, pack_low.needs_output = True, True
+pack_low.input_materials = {MaterialType.AMETHYST_PART: 5.0, MaterialType.ORIGINIUM_POWDER: 10.0}
+pack_low.output_materials = {MaterialType.LOW_CAP_BATTERY: 1.0}
+pack_low.allowed_input_materials = [MaterialType.AMETHYST_PART, MaterialType.ORIGINIUM_POWDER]
+pack_low.max_inventory = 200.0
+BUILDING_CATALOG[551] = pack_low
+
+# 10蓝铁零件 + 15源石粉末 = 中容谷地电池
+pack_mid = SystemBBuilding(component_id=552, size=(5, 3), name="封装机(中容)")
+pack_mid.needs_input, pack_mid.needs_output = True, True
+pack_mid.input_materials = {MaterialType.BLUE_IRON_PART: 10.0, MaterialType.ORIGINIUM_POWDER: 15.0}
+pack_mid.output_materials = {MaterialType.MID_CAP_BATTERY: 1.0}
+pack_mid.allowed_input_materials = [MaterialType.BLUE_IRON_PART, MaterialType.ORIGINIUM_POWDER]
+pack_mid.max_inventory = 200.0
+BUILDING_CATALOG[552] = pack_mid
+
 
 # ==========================================
 # 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)

@@ -50,6 +50,33 @@ class MaterialType(Enum):
     APPLE_SEED = auto()  # 苹果种子
     APPLE = auto()  # 苹果
 
+    # ==========================================
+    # 2. 矿物生产链
+    # ==========================================
+    # [矿物原料]
+    ORIGINIUM = auto()
+    AMETHYST = auto()  # 紫晶
+    BLUE_IRON = auto()  # 蓝铁
+
+    # [一级产物]
+    ORIGINIUM_POWDER = auto()  # 源石粉
+    CRYSTAL_SHELL = auto()  # 晶体外壳
+    AMETHYST_FIBER = auto()  # 紫晶纤维
+    BLUE_IRON_INGOT = auto()  # 蓝铁块
+
+    # [二级产物]
+    CRYSTAL_SHELL_POWDER = auto()  # 晶体外壳粉末
+    AMETHYST_POWDER = auto()  # 紫晶粉
+    BLUE_IRON_POWDER = auto()  # 蓝铁粉
+    AMETHYST_PART = auto()  # 紫晶零件
+    BLUE_IRON_PART = auto()  # 蓝铁零件
+    AMETHYST_BOTTLE = auto()  # 紫晶瓶
+    BLUE_IRON_BOTTLE = auto()  # 蓝铁瓶
+
+    # [三级产物]
+    LOW_CAP_BATTERY = auto()  # 低容谷地电池
+    MID_CAP_BATTERY = auto()  # 中容谷地电池
+
 
 class Material:
     def __init__(self, mat_type: MaterialType, state: MaterialState):

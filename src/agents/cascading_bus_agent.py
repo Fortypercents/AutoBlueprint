@@ -157,6 +157,9 @@ class CascadingBusAgent(BaseAgent):
             env.place_transport(belt, x, out_y, Direction.RIGHT)
 
     def render_blueprint(self, env: GridMap, tick: int = 0, current_yield: Dict = None):
+        """
+        修改后的渲染函数：增加了横纵坐标显示。
+        """
         yield_str = ", ".join([f"[{getattr(m, 'name', str(m))}]: {v}" for m, v in (current_yield or {}).items()])
 
         b_legend = {}
@@ -172,11 +175,13 @@ class CascadingBusAgent(BaseAgent):
         print(f"=== 🏭 层级瀑布流水线自动打样 [Tick {tick:03d}] ===")
         print(f"终端收集: {yield_str}")
         print(f"建筑图例: {legend_str}")
-        print("=" * 64)
+        print("-" * (env.width * 3 + 5))
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
+
+        # 逐行打印，包含纵坐标
         for y in range(env.height):
-            row_str = ""
+            row_str = f"{y:02d} |"  # 打印纵坐标
             for x in range(env.width):
                 cell = env._get_cell(x, y)
                 if cell is None:
@@ -199,5 +204,12 @@ class CascadingBusAgent(BaseAgent):
                         row_str += f"[S]" if is_router else f" {dir_char} "
                 else:
                     row_str += "[?]"
-            print(f"{y:02d} {row_str}")
+            print(row_str)
+
+        # 打印横坐标底线和刻度
+        print("   " + "-" * (env.width * 3 + 2))
+        header_x = "    "
+        for x in range(env.width):
+            header_x += f"{x:02d} " if x % 2 == 0 else "   "  # 每隔两个显示一次，防止重叠
+        print(header_x)
         print("=========================================================================")
