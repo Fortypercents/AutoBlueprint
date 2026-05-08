@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import time
 from typing import Dict, Tuple, Any
 from entities.material import MaterialType
@@ -56,6 +60,8 @@ class SystemBTestAgent(BaseAgent):
         # 3. 苹果产出总线 (P1, P2)
         route([(3, 12), (3, 19)])  # P1 苹果前半段
         env.place_transport(get_transport_instance(314), 3, 20, Direction.DOWN)  # 为P1放置交叉器(314)
+        env.place_transport(get_transport_instance(314), 9, 24, Direction.DOWN)  # 交叉器：P2苹果(下) x P1苹果(右)
+        env.place_transport(get_transport_instance(314), 21, 6, Direction.LEFT)  # 交叉器：E1种子(上) x E2种子(左)
         route([(3, 21), (3, 24), (31, 24)])  # P1 苹果后半段
 
         # P2 苹果直行向下，将在 (9,20) 与 P1的种子回流线发生【交叉】
@@ -83,17 +89,16 @@ class SystemBTestAgent(BaseAgent):
         # 左侧分流给 P1 (途径 9,20 和 3,20 的交叉器，从右向左穿透)
         route([(16, 20), (10, 20)])  # 抵达交叉器(9,20)右侧
         route([(8, 20), (4, 20)])  # 穿过9,20，抵达交叉器(3,20)右侧
-        route([(2, 20), (1, 20), (1, 7), (3, 7)])  # 穿过3,20后，走x=1完美绕开P1占地，送入P1输入口(3,7)
+        route([(2, 20), (1, 20), (1, 6), (3, 6), (3,7)])  # 穿过3,20后，走x=1完美绕开P1占地，送入P1输入口(3,7)
 
     def render_blueprint(self, env: GridMap, tick: int = 0, total_yield: float = 0):
         print("\n" * 5)
         print(f"=== 🌱 体系 B 免交叉器闭环点火测试 [Tick {tick:03d}] | 累计产出苹果: {total_yield} 个 ===")
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
-        grid_strs = []
 
         for y in range(env.height):
-            row_str = ""
+            row_str = f"{y:02d} |"
             for x in range(env.width):
                 cell = env._get_cell(x, y)
                 if cell is None:
@@ -118,9 +123,13 @@ class SystemBTestAgent(BaseAgent):
                         row_str += base_char
                 else:
                     row_str += "[?]"
-            grid_strs.append(f"{y:02d} {row_str}")
+            print(row_str)
 
-        for row in grid_strs: print(row)
+        print("   " + "-" * (env.width * 3 + 2))
+        header_x = "    "
+        for x in range(env.width):
+            header_x += f"{x:02d} " if x % 2 == 0 else "   "
+        print(header_x)
         print("=====================================================================")
 
 
@@ -159,24 +168,30 @@ def run_test():
                             b.inventory[mat] = current_inv + take_amt
                             port_cell.current_item = (mat, amt - take_amt) if amt - take_amt > 0 else None
 
-        # C. 模拟交叉器的独立四向物理缓冲 (无需修改你的 GridMap 引擎源码)
-        for cx in [3, 9]:
-            crosser = env._get_cell(cx, 20)
+        # C. 模拟所有交叉器的独立四向物理缓冲 (解耦方向判定，使用入口/出口地址映射)
+        crosser_defs = [
+            # 格式: {'pos': 交叉器坐标, 'p1': (入口1, 出口1), 'p2': (入口2, 出口2)}
+            {'pos': (3, 20),  'p1': ((3, 19), (3, 21)),   'p2': ((4, 20), (2, 20))},   # (3,20): P1苹果(向下) 穿 E1种子(向左)
+            {'pos': (9, 20),  'p1': ((9, 19), (9, 21)),   'p2': ((10, 20), (8, 20))},  # (9,20): P2苹果(向下) 穿 E1种子(向左)
+            {'pos': (9, 24),  'p1': ((9, 23), (9, 25)),   'p2': ((8, 24), (10, 24))},  # (9,24): P2苹果(向下) 穿 P1苹果(向右)
+            {'pos': (21, 6),  'p1': ((21, 7), (21, 5)),   'p2': ((22, 6), (20, 6))}    # (21,6): E1种子(向上) 穿 E2种子(向左)
+        ]
+
+        for cdef in crosser_defs:
+            cx, cy = cdef['pos']
+            crosser = env._get_cell(cx, cy)
             if crosser and type(crosser).__name__ == "SystemBCrosser":
-                apple_in, apple_out = env._get_cell(cx, 19), env._get_cell(cx, 21)  # 苹果的下行线
-                seed_in, seed_out = env._get_cell(cx + 1, 20), env._get_cell(cx - 1, 20)  # 种子的左行线
+                # 遍历两条相交的线路
+                for path in ['p1', 'p2']:
+                    in_pos, out_pos = cdef[path]
+                    c_in = env._get_cell(*in_pos)
+                    c_out = env._get_cell(*out_pos)
 
-                # 让苹果直接跃迁穿透交叉器
-                if apple_in and getattr(apple_in, 'current_item', None):
-                    if apple_out and getattr(apple_out, 'current_item', None) is None:
-                        apple_out.current_item = apple_in.current_item
-                        apple_in.current_item = None
-
-                # 让种子直接跃迁穿透交叉器
-                if seed_in and getattr(seed_in, 'current_item', None):
-                    if seed_out and getattr(seed_out, 'current_item', None) is None:
-                        seed_out.current_item = seed_in.current_item
-                        seed_in.current_item = None
+                    # 只要入口有物品，且出口为空，直接瞬间穿透
+                    if c_in and getattr(c_in, 'current_item', None):
+                        if c_out and getattr(c_out, 'current_item', None) is None:
+                            c_out.current_item = c_in.current_item
+                            c_in.current_item = None
 
         # D. 物理引擎 Tick
         env.tick()
