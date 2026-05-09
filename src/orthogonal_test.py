@@ -10,7 +10,7 @@ from entities.transport import TransportComponent
 from environment.grid_map import GridMap
 
 # 导入分离出来的 Agent
-from agents.cascading_bus_agent import CascadingBusAgent
+from src.agents.old_agents.cascading_bus_agent import CascadingBusAgent
 
 
 def run_test():
