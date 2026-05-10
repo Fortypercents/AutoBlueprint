@@ -94,7 +94,7 @@ BUILDING_CATALOG[513] = refinery_iron
 crusher_shell = SystemBBuilding(component_id=521, size=(3, 3), name="粉碎机(外壳)")
 crusher_shell.needs_input, crusher_shell.needs_output = True, True
 crusher_shell.input_materials = {MaterialType.CRYSTAL_SHELL: 1.0}
-crusher_shell.output_materials = {MaterialType.CRYSTAL_SHELL_POWDER: 2.0}
+crusher_shell.output_materials = {MaterialType.CRYSTAL_SHELL_POWDER: 1.0}
 crusher_shell.allowed_input_materials = [MaterialType.CRYSTAL_SHELL]
 crusher_shell.max_inventory = 50.0
 BUILDING_CATALOG[521] = crusher_shell
@@ -103,7 +103,7 @@ BUILDING_CATALOG[521] = crusher_shell
 crusher_ame = SystemBBuilding(component_id=522, size=(3, 3), name="粉碎机(紫晶)")
 crusher_ame.needs_input, crusher_ame.needs_output = True, True
 crusher_ame.input_materials = {MaterialType.AMETHYST_FIBER: 1.0}
-crusher_ame.output_materials = {MaterialType.AMETHYST_POWDER: 2.0}
+crusher_ame.output_materials = {MaterialType.AMETHYST_POWDER: 1.0}
 crusher_ame.allowed_input_materials = [MaterialType.AMETHYST_FIBER]
 crusher_ame.max_inventory = 50.0
 BUILDING_CATALOG[522] = crusher_ame
@@ -112,7 +112,7 @@ BUILDING_CATALOG[522] = crusher_ame
 crusher_iron = SystemBBuilding(component_id=523, size=(3, 3), name="粉碎机(蓝铁)")
 crusher_iron.needs_input, crusher_iron.needs_output = True, True
 crusher_iron.input_materials = {MaterialType.BLUE_IRON_INGOT: 1.0}
-crusher_iron.output_materials = {MaterialType.BLUE_IRON_POWDER: 2.0}
+crusher_iron.output_materials = {MaterialType.BLUE_IRON_POWDER: 1.0}
 crusher_iron.allowed_input_materials = [MaterialType.BLUE_IRON_INGOT]
 crusher_iron.max_inventory = 50.0
 BUILDING_CATALOG[523] = crusher_iron
@@ -121,7 +121,7 @@ BUILDING_CATALOG[523] = crusher_iron
 crusher_ori = SystemBBuilding(component_id=524, size=(3, 3), name="粉碎机(源石)")
 crusher_ori.needs_input, crusher_ori.needs_output = True, True
 crusher_ori.input_materials = {MaterialType.ORIGINIUM: 1.0}
-crusher_ori.output_materials = {MaterialType.ORIGINIUM_POWDER: 2.0}
+crusher_ori.output_materials = {MaterialType.ORIGINIUM_POWDER: 1.0}
 crusher_ori.allowed_input_materials = [MaterialType.ORIGINIUM]
 crusher_ori.max_inventory = 50.0
 BUILDING_CATALOG[524] = crusher_ori
@@ -168,7 +168,7 @@ BUILDING_CATALOG[542] = press_iron
 # 5紫晶零件 + 10源石粉末 = 低容谷地电池
 pack_low = SystemBBuilding(component_id=551, size=(5, 3), name="封装机(低容)")
 pack_low.needs_input, pack_low.needs_output = True, True
-pack_low.input_materials = {MaterialType.AMETHYST_PART: 5.0, MaterialType.ORIGINIUM_POWDER: 10.0}
+pack_low.input_materials = {MaterialType.AMETHYST_PART: 1.0, MaterialType.ORIGINIUM_POWDER: 2.0}
 pack_low.output_materials = {MaterialType.LOW_CAP_BATTERY: 1.0}
 pack_low.allowed_input_materials = [MaterialType.AMETHYST_PART, MaterialType.ORIGINIUM_POWDER]
 pack_low.max_inventory = 200.0
@@ -177,7 +177,7 @@ BUILDING_CATALOG[551] = pack_low
 # 10蓝铁零件 + 15源石粉末 = 中容谷地电池
 pack_mid = SystemBBuilding(component_id=552, size=(5, 3), name="封装机(中容)")
 pack_mid.needs_input, pack_mid.needs_output = True, True
-pack_mid.input_materials = {MaterialType.BLUE_IRON_PART: 10.0, MaterialType.ORIGINIUM_POWDER: 15.0}
+pack_mid.input_materials = {MaterialType.BLUE_IRON_PART: 2.0, MaterialType.ORIGINIUM_POWDER: 3.0}
 pack_mid.output_materials = {MaterialType.MID_CAP_BATTERY: 1.0}
 pack_mid.allowed_input_materials = [MaterialType.BLUE_IRON_PART, MaterialType.ORIGINIUM_POWDER]
 pack_mid.max_inventory = 200.0
