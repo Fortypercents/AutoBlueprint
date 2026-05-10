@@ -233,7 +233,7 @@ class GridMap:
             if mat_state is not None and mat_state != supported_state:
                 return 0.0
 
-                # ==========================================
+        # ==========================================
         # 1. 严格化传送带之间的传输规则 (防误伤逻辑)
         # ==========================================
         is_multi_port = any(name in type(target_cell).__name__ for name in
