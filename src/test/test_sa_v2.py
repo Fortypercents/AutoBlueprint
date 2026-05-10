@@ -16,7 +16,7 @@ def run_advanced_sa_test():
 
     # 设立目标：2蓝铁锭 -> 1蓝铁瓶。由于我们加入了“产能感知”，Agent 会自动计算需要几台机器。
     agent = SABaselineAgent(
-        target_outputs={MaterialType.BLUE_IRON_BOTTLE: 1.0},
+        target_outputs={MaterialType.BLUE_IRON_BOTTLE: 3.0},
         available_inputs=[MaterialType.BLUE_IRON]
     )
 

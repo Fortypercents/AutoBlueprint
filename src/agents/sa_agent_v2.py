@@ -2,7 +2,7 @@ import math
 import random
 import heapq
 from collections import deque, defaultdict
-from typing import List, Dict, Tuple, Optional, Set, Any
+from typing import List, Dict, Tuple, Optional, Set
 
 from entities.registry import get_building_instance, get_transport_instance
 from entities.transport import Direction
@@ -22,18 +22,19 @@ class SABaselineAgent:
         self.used_ports: Set[Tuple[int, int]] = set()
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
+        self.route_paths = {}  # 记录每条线缆的具体路径坐标集
 
-        # SA 参数
-        self.initial_temp = 2500.0
-        self.cooling_rate = 0.97
+        # SA 参数 - 调整为更利于收敛的参数
+        self.initial_temp = 2000.0
+        self.cooling_rate = 0.96
         self.min_temp = 1.0
-        self.iters_per_temp = 200
+        self.iters_per_temp = 150
 
     def optimize(self, env: GridMap):
         print("\n[SABaselineAgent] Phase 1: 构建产能感知有向无环图 (DAG)...")
         self._build_capacity_aware_dag()
 
-        print("\n[SABaselineAgent] Phase 2: 端口级旋转与排布寻优 (Port-Aware SA Placement)...")
+        print("\n[SABaselineAgent] Phase 2: 保障连通率的全局布局 (Padding-Aware SA)...")
         best_state = self._run_simulated_annealing(env)
 
         self.node_positions = best_state
@@ -41,7 +42,7 @@ class SABaselineAgent:
             building = self.nodes[nid]
             env.place_building(building, x, y, d)
 
-        print("\n[SABaselineAgent] Phase 3: 精准微观布线 (Rip-up & Reroute)...")
+        print("\n[SABaselineAgent] Phase 3: 严格受理约束的精准布线 (Strict Routing)...")
         self._route_connections_with_rip_up(env)
 
     # ==========================================
@@ -98,15 +99,13 @@ class SABaselineAgent:
                             demand -= transfer
 
     # ==========================================
-    # Phase 2: 全新的、具备端口与旋转感知的 SA
+    # Phase 2: 优先保证走线空间的 SA (1-Grid Padding)
     # ==========================================
     def _get_side_ports(self, nid: int, state: Dict, is_input: bool) -> List[Tuple[int, int]]:
-        """【核心修复】：根据建筑当前的旋转方向，精准返回对应的进出口坐标"""
         x, y, d = state[nid]
         w_orig, h_orig = self.nodes[nid].size
         w, h = (h_orig, w_orig) if d in (Direction.LEFT, Direction.RIGHT) else (w_orig, h_orig)
 
-        # 假定默认朝上时：顶部进货，底部出货
         if d == Direction.UP:
             return [(x + dx, y - 1) for dx in range(w)] if is_input else [(x + dx, y + h) for dx in range(w)]
         elif d == Direction.RIGHT:
@@ -121,8 +120,8 @@ class SABaselineAgent:
         current_state = {}
         cx, cy = env.width // 2, env.height // 2
         for nid, b in self.nodes.items():
-            rx = max(2, min(env.width - b.size[0] - 2, cx + random.randint(-6, 6)))
-            ry = max(5, min(env.height - b.size[1] - 5, cy + random.randint(-6, 6)))
+            rx = max(2, min(env.width - b.size[0] - 2, cx + random.randint(-8, 8)))
+            ry = max(5, min(env.height - b.size[1] - 5, cy + random.randint(-8, 8)))
             current_state[nid] = (rx, ry, Direction.UP)
 
         current_cost = self._evaluate_state(current_state, env)
@@ -149,12 +148,10 @@ class SABaselineAgent:
         nids = list(state.keys())
         global_min_x, global_min_y, global_max_x, global_max_y = float('inf'), float('inf'), 0, 0
 
-        # 获取实际尺寸
         def get_real_size(nid, d):
             w, h = self.nodes[nid].size
             return (h, w) if d in (Direction.LEFT, Direction.RIGHT) else (w, h)
 
-        # 1. 越界与基础面积
         for nid, (x, y, d) in state.items():
             w, h = get_real_size(nid, d)
             if x < 1 or y < 2 or x + w >= env.width - 1 or y + h >= env.height - 2:
@@ -162,56 +159,43 @@ class SABaselineAgent:
             global_min_x, global_min_y = min(global_min_x, x), min(global_min_y, y)
             global_max_x, global_max_y = max(global_max_x, x + w), max(global_max_y, y + h)
 
-        # 2. 绝对刚体碰撞 (不允许实体间有任何重叠)
+        # 【核心修正1】：强制要求建筑之间保留 1 格的缓冲空间 (Padding)，提供物理走廊
         for i in range(len(nids)):
             for j in range(i + 1, len(nids)):
                 x1, y1, d1 = state[nids[i]]
                 x2, y2, d2 = state[nids[j]]
                 w1, h1 = get_real_size(nids[i], d1)
                 w2, h2 = get_real_size(nids[j], d2)
-                if not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1):
-                    cost += 10000.0
+                # +1 保证周围留空，防止引脚和走线被挤死
+                if not (x1 + w1 + 1 <= x2 or x2 + w2 + 1 <= x1 or y1 + h1 + 1 <= y2 or y2 + h2 + 1 <= y1):
+                    cost += 8000.0
 
-        # 3. 核心：引脚级连接预判 (逼迫算法进行正确的旋转与预留排线空间)
         active_ports = []
         for edge in self.edges:
             src_nid, dst_nid = edge['src'], edge['dst']
-
-            # 拿到供应方实际的输出口，和需求方实际的输入口
             out_ports = self._get_side_ports(src_nid, state, is_input=False)
             in_ports = self._get_side_ports(dst_nid, state, is_input=True)
             active_ports.extend(out_ports + in_ports)
 
-            # 计算最佳对接引脚之间的曼哈顿距离
+            # 逼迫引脚相互靠近并对齐
             min_port_dist = min(abs(px - qx) + abs(py - qy) for px, py in out_ports for qx, qy in in_ports)
+            cost += min_port_dist * 4.0
 
-            # 【关键】：距离越小得分越高！这会迫使建筑互相旋转，将进出口“面对面”对准！
-            cost += min_port_dist * 3.0
-
-            # 扩展含线全局包围盒
-            for px, py in out_ports:
-                global_min_x, global_max_x = min(global_min_x, px), max(global_max_x, px)
-                global_min_y, global_max_y = min(global_min_y, py), max(global_max_y, py)
-            for qx, qy in in_ports:
-                global_min_x, global_max_x = min(global_min_x, qx), max(global_max_x, qx)
-                global_min_y, global_max_y = min(global_min_y, qy), max(global_max_y, qy)
-
-        # 4. 【致命排线检查】：绝杀那些封死传送带的“假优解”
-        # 如果排线必经的引脚，被别的（甚至自己的）建筑压在身下，直接给毁灭惩罚！
+        # 致命排线检查：引脚绝对不能被实体压住
         for px, py in active_ports:
             for nid, (x, y, d) in state.items():
                 w, h = get_real_size(nid, d)
                 if x <= px < x + w and y <= py < y + h:
-                    cost += 5000.0  # 传送带端口被实体建筑压死，完全无法排线！
+                    cost += 10000.0
 
         # 外部连线引导
         for nid, (x, y, d) in state.items():
             b = self.nodes[nid]
-            if any(m in self.available_inputs for m in b.input_materials): cost += y * 1.5
-            if any(m in self.target_outputs_dict for m in b.output_materials): cost += (env.height - y) * 1.5
+            if any(m in self.available_inputs for m in b.input_materials): cost += y * 2.0
+            if any(m in self.target_outputs_dict for m in b.output_materials): cost += (env.height - y) * 2.0
 
         area = max(0, global_max_x - global_min_x) * max(0, global_max_y - global_min_y)
-        cost += area * 1.5
+        cost += area * 1.2  # 降低面积在总成本中的权重，优先保连通
         return cost
 
     def _get_neighbor_state(self, state: Dict, env: GridMap):
@@ -220,12 +204,10 @@ class SABaselineAgent:
         x, y, d = new_state[nid]
 
         action = random.random()
-        if action < 0.5:
-            # 频繁平移
-            dx, dy = random.randint(-3, 3), random.randint(-3, 3)
+        if action < 0.6:
+            dx, dy = random.randint(-2, 2), random.randint(-2, 2)
             new_state[nid] = (max(1, min(env.width - 2, x + dx)), max(2, min(env.height - 3, y + dy)), d)
-        elif action < 0.85:
-            # 高频旋转 (0, 90, 180, 270)
+        elif action < 0.9:
             dirs = [Direction.UP, Direction.RIGHT, Direction.DOWN, Direction.LEFT]
             new_state[nid] = (x, y, dirs[(dirs.index(d) + 1) % 4])
         else:
@@ -236,18 +218,18 @@ class SABaselineAgent:
         return new_state
 
     # ==========================================
-    # Phase 3: 严格受方向约束的 A* 寻路
+    # Phase 3: 严格物理法则 A* 与 定向拆解 (Targeted Rip-up)
     # ==========================================
     def _get_available_ports(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
-        """仅返回对应当前旋转方向的物理引脚"""
         ports = self._get_side_ports(nid, self.node_positions, is_input)
         return [p for p in ports if p not in self.used_ports]
 
     def _route_connections_with_rip_up(self, env: GridMap):
         routing_tasks = []
+        # 将任务排序：先连内部核心边，再连外部边
         for i, edge in enumerate(self.edges):
             routing_tasks.append(
-                {'id': i, 'src_type': 'node', 'src': edge['src'], 'dst_type': 'node', 'dst': edge['dst'],
+                {'id': f"edge_{i}", 'src_type': 'node', 'src': edge['src'], 'dst_type': 'node', 'dst': edge['dst'],
                  'mat': edge['mat']})
 
         for nid, b in self.nodes.items():
@@ -264,7 +246,7 @@ class SABaselineAgent:
 
         failed_queue = deque(routing_tasks)
         routed_history = {}
-        max_attempts = len(routing_tasks) * 3
+        max_attempts = len(routing_tasks) * 5
         attempts = 0
 
         while failed_queue and attempts < max_attempts:
@@ -276,28 +258,36 @@ class SABaselineAgent:
                 starts = self._get_available_ports(t['src'], is_input=False)
             else:
                 dst_x = self.node_positions[t['dst']][0]
-                starts = [(x, 0) for x in range(max(0, dst_x - 4), min(env.width, dst_x + 5))]
+                starts = [(x, 0) for x in range(max(0, dst_x - 6), min(env.width, dst_x + 7))]
 
             if t['dst_type'] == 'node':
                 goals = self._get_available_ports(t['dst'], is_input=True)
             else:
                 src_x = self.node_positions[t['src']][0]
-                goals = [(x, env.height - 1) for x in range(max(0, src_x - 4), min(env.width, src_x + 5))]
+                goals = [(x, env.height - 1) for x in range(max(0, src_x - 6), min(env.width, src_x + 7))]
+
+            if not starts or not goals:
+                failed_queue.append(t)
+                continue
 
             path = self._a_star_route_multi(env, starts, goals)
 
             if path:
                 routed_history[t['id']] = path
+                self.route_paths[t['id']] = set(path)
                 self._lay_physical_belts(env, path, t)
             else:
-                print(f"[Rip-up] 任务 {t['id']} 寻路失败。强行拆毁挡路旧线重试...")
+                print(f"[Rip-up] 任务 {t['id']} 走线死锁。执行定向拆解 (Targeted Rip-up)...")
                 if routed_history:
-                    rip_keys = random.sample(list(routed_history.keys()), min(2, len(routed_history)))
-                    for r_key in rip_keys:
+                    # 【核心修正2】：定向拆解！优先拆除最后铺设的 2 条线，因为它们最有可能堵住了当前的任务
+                    recent_keys = list(routed_history.keys())[-2:]
+                    for r_key in recent_keys:
                         old_path = routed_history.pop(r_key)
+                        self.route_paths.pop(r_key, None)
                         self._remove_physical_belts(env, old_path)
-                        failed_queue.append(next(task for task in routing_tasks if task['id'] == r_key))
-                failed_queue.append(t)
+                        # 将被拆除的任务重新插回队首（稍后执行），把当前失败任务优先执行
+                        failed_queue.appendleft(next(task for task in routing_tasks if task['id'] == r_key))
+                failed_queue.appendleft(t)  # 保证清空阻挡后立即重试自身
 
     def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]):
         def heuristic(curr):
@@ -318,14 +308,44 @@ class SABaselineAgent:
             for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
                 nx, ny = x + dx, y + dy
                 if not env.is_in_bounds(nx, ny): continue
+
                 cell = env._get_cell(nx, ny)
+                is_crossable = False
 
-                # 如果这个格子不是目标，不是起点，且已经被建筑占了，绝对不可跨越！
                 if cell is not None and (nx, ny) not in goals and (nx, ny) not in starts:
-                    if type(cell).__name__ != "SystemBBelt":
-                        continue  # 撞到建筑了，死路一条
+                    # 【核心修正3】：恢复严格的垂直交叉器物理判定，禁止非直角的随意穿模
+                    if type(cell).__name__ == "SystemBBelt":
+                        move_dir = Direction.RIGHT if nx > x else Direction.LEFT if nx < x else Direction.DOWN if ny > y else Direction.UP
+                        belt_out_dir = getattr(cell, 'direction', Direction.RIGHT)
+                        belt_in_dir = getattr(cell, 'in_dir', None)
+                        if belt_in_dir is None:
+                            belt_in_dir = Direction.LEFT if belt_out_dir == Direction.RIGHT else Direction.RIGHT if belt_out_dir == Direction.LEFT else Direction.DOWN if belt_out_dir == Direction.UP else Direction.UP
 
-                new_cost = g_score[current] + 1
+                        is_straight = False
+                        if belt_out_dir == Direction.RIGHT and belt_in_dir == Direction.LEFT:
+                            is_straight = True
+                        elif belt_out_dir == Direction.LEFT and belt_in_dir == Direction.RIGHT:
+                            is_straight = True
+                        elif belt_out_dir == Direction.UP and belt_in_dir == Direction.DOWN:
+                            is_straight = True
+                        elif belt_out_dir == Direction.DOWN and belt_in_dir == Direction.UP:
+                            is_straight = True
+
+                        if is_straight:
+                            if move_dir in [Direction.UP, Direction.DOWN] and belt_out_dir in [Direction.LEFT,
+                                                                                               Direction.RIGHT]:
+                                is_crossable = True
+                            elif move_dir in [Direction.LEFT, Direction.RIGHT] and belt_out_dir in [Direction.UP,
+                                                                                                    Direction.DOWN]:
+                                is_crossable = True
+
+                    if not is_crossable:
+                        continue  # 遇到建筑或非垂直传送带，绝对不可跨越
+
+                # 如果跨越已有的线，稍微增加惩罚值，促使优先走空地
+                cross_penalty = 2 if is_crossable else 1
+                new_cost = g_score[current] + cross_penalty
+
                 if (nx, ny) not in g_score or new_cost < g_score[(nx, ny)]:
                     g_score[(nx, ny)] = new_cost
                     heapq.heappush(frontier, (new_cost + heuristic((nx, ny)), (nx, ny)))
@@ -348,26 +368,59 @@ class SABaselineAgent:
 
         for i in range(len(path)):
             px, py = path[i]
-            out_dir = Direction.DOWN if i + 1 == len(path) else Direction((path[i + 1][0] - px, path[i + 1][1] - py))
-            in_dir = Direction.UP if i == 0 else Direction((px - path[i - 1][0], py - path[i - 1][1]))
+            if i + 1 < len(path):
+                nx, ny = path[i + 1]
+                out_dir = Direction.RIGHT if nx > px else Direction.LEFT if nx < px else Direction.DOWN if ny > py else Direction.UP
+            else:
+                out_dir = Direction.DOWN
+
+            if i > 0:
+                prev_x, prev_y = path[i - 1]
+                in_dir = Direction.LEFT if px > prev_x else Direction.RIGHT if px < prev_x else Direction.UP if py > prev_y else Direction.DOWN
+            else:
+                in_dir = Direction.UP
+
             cell = env._get_cell(px, py)
             if cell is None:
                 comp = get_transport_instance(301)
                 comp.in_dir = in_dir
                 env.place_transport(comp, px, py, out_dir)
-            elif type(cell).__name__ == "SystemBBelt" and (px, py) != start_port and (px, py) != end_port:
-                env.transports.remove(cell)
-                env.grid[py][px] = None
-                comp = get_transport_instance(314)  # Crosser
-                comp.in_dir = in_dir
-                env.place_transport(comp, px, py, out_dir)
+            else:
+                if (px, py) == start_port or (px, py) == end_port:
+                    if hasattr(cell, 'in_dir'): cell.in_dir = in_dir
+                elif type(cell).__name__ == "SystemBBelt" and (px, py) != start_port and (px, py) != end_port:
+                    if cell in env.transports: env.transports.remove(cell)
+                    env.grid[py][px] = None
+                    comp = get_transport_instance(314)  # 严格替换为交叉器
+                    comp.in_dir = in_dir
+                    env.place_transport(comp, px, py, out_dir)
 
     def _remove_physical_belts(self, env: GridMap, path: List[Tuple[int, int]]):
         if not path: return
         self.used_ports.discard(path[0])
         self.used_ports.discard(path[-1])
-        for px, py in path:
+
+        for i, (px, py) in enumerate(path):
             cell = env._get_cell(px, py)
-            if cell and cell in env.transports:
+            if cell is None: continue
+
+            # 如果是交叉器 (314)，拆除时需要降级回普通传送带 (301)，而不是直接挖空
+            if type(cell).__name__ == "SystemCrosser" or type(cell).__name__ == "SystemBBelt" and getattr(cell, 'id',
+                                                                                                          0) == 314:
+                # 寻找哪条别的线的历史路径经过这里，恢复它的方向
+                restored = False
+                for other_path in self.route_paths.values():
+                    if (px, py) in other_path:
+                        env.transports.remove(cell)
+                        env.grid[py][px] = None
+                        comp = get_transport_instance(301)
+                        # 这里简化处理：假定原线路的方向不受影响
+                        env.place_transport(comp, px, py, cell.direction)
+                        restored = True
+                        break
+                if not restored and cell in env.transports:
+                    env.transports.remove(cell)
+                    env.grid[py][px] = None
+            elif cell in env.transports:
                 env.transports.remove(cell)
                 env.grid[py][px] = None
