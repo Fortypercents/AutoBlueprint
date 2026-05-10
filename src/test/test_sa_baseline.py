@@ -14,7 +14,7 @@ def run_test():
 
     # 1. 设立目标：产出 BLUE_IRON_BOTTLE，系统提供 BLUE_IRON
     agent = SABaselineAgent(
-        target_outputs={MaterialType.BLUE_IRON_BOTTLE: 1.0},
+        target_outputs={MaterialType.BLUE_IRON_BOTTLE: 4.0},
         available_inputs=[MaterialType.BLUE_IRON]
     )
 
