@@ -19,7 +19,7 @@ def run_test():
     # )
 
     agent = FdpSaAgent(
-        target_outputs={MaterialType.MID_CAP_BATTERY: 1.0},
+        target_outputs={MaterialType.MID_CAP_BATTERY: 2.0},
         available_inputs=[MaterialType.BLUE_IRON, MaterialType.ORIGINIUM]
     )
 
@@ -31,7 +31,7 @@ def run_test():
         env.update_connections(b)
 
     total_yield = 0
-    ticks_to_simulate = 200
+    ticks_to_simulate = 180
 
     print("=== ⚙️ FDP+SA Agent Autonomous Blueprint Generated ===")
     for tick in range(1, ticks_to_simulate + 1):
