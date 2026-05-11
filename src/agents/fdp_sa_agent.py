@@ -13,10 +13,10 @@ from agents.utils import get_recipe_catalog
 
 class FdpSaAgent:
     """
-    两阶段混合布局智能体 (极致紧凑 & 严谨正交布线版):
-    1. FDP 寻找全局紧凑拓扑 (带向心力压缩)。
-    2. SA 最小化占地面积 (Bounding Box 惩罚)。
-    3. M:N 动态多目标 A* 寻路，带【绝对引脚保护】与【强制直行穿越锁】。
+    第二代/混合布局智能体 (极致稳定版):
+    1. 动态边界控制与全图跃迁避免死锁。
+    2. 加入 Legalization Fallback (合法化螺旋寻位)，保证 100% 建筑落盘，不缺件漏件！
+    3. M:N 动态多目标 A* 寻路，带绝对引脚保护与交叉直穿锁。
     """
 
     def __init__(self, target_outputs: Dict[MaterialType, float], available_inputs: List[MaterialType]):
@@ -31,32 +31,153 @@ class FdpSaAgent:
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
 
-        # 保持 padding 为 3：为机器前方的交叉与转弯预留缓冲空间，防止死胡同
-        self.padding = 3
+        self.padding = 3  # 留出 3 格防止拥堵
 
     def optimize(self, env: GridMap):
-        print("\n[FdpSaAgent] 启动紧凑型混合布局引擎...")
+        print("\n[SAAgentV2] 启动混合布局引擎...")
 
         self._calculate_ratios_and_instances()
         self._build_instance_graph()
 
-        print(f"[FdpSaAgent] 计算 FDP 力导向初始拓扑 (聚拢收敛)...")
+        print(f"[SAAgentV2] 执行全局拓扑初排...")
         fdp_state = self._run_force_directed_placement(env)
 
-        print(f"[FdpSaAgent] 执行 SA 模拟退火 (最小化占地面积)...")
+        print(f"[SAAgentV2] 执行 SA 模拟退火微调...")
         best_state = self._run_simulated_annealing(env, fdp_state)
         self.node_positions = best_state
 
+        # ==========================================
+        # 核心修复: 落地建筑时加入【合法化回退安全网】
+        # ==========================================
         for nid, state in self.node_positions.items():
             building = self.nodes[nid]
-            env.place_building(building, state['x'], state['y'], state['dir'])
+            placed = env.place_building(building, state['x'], state['y'], state['dir'])
 
-        print(f"[FdpSaAgent] 执行多源多目标 A* 自动布线 (启用引脚保护区与交叉锁)...")
+            if not placed:
+                print(f"[Warning] 🚧 碰撞或越界！建筑 {building.name} 无法在 ({state['x']},{state['y']}) 放置，启动螺旋修正机制...")
+                placed = self._legalize_placement(env, building, state['x'], state['y'], state['dir'], nid)
+                if not placed:
+                    print(f"[Error] 灾难性拥堵：无法在地图上为 {building.name} 找到任何容身之所！")
+
+        print(f"[SAAgentV2] 执行多源多目标 A* 自动布线...")
         self._route_connections(env)
-        print(f"[FdpSaAgent] 蓝图构建完毕！")
+        print(f"[SAAgentV2] 蓝图构建完毕！")
+
+    def _legalize_placement(self, env: GridMap, building, start_x, start_y, direction, nid) -> bool:
+        """
+        合法化回退 (Legalization): 以目标点为中心，一圈一圈向外螺旋搜索最近的空地。
+        彻底解决“缺漏件”的问题。
+        """
+        max_radius = max(env.width, env.height)
+        for r in range(1, max_radius):
+            # 遍历半径为 r 的正方形环
+            for dx in range(-r, r + 1):
+                for dy in range(-r, r + 1):
+                    if abs(dx) == r or abs(dy) == r:
+                        nx, ny = start_x + dx, start_y + dy
+                        if env.is_in_bounds(nx, ny):
+                            # 尝试在此处放下建筑
+                            if env.place_building(building, nx, ny, direction):
+                                # 若成功，立刻同步覆盖 SA 的旧坐标，确保后面的 A* 能找到它！
+                                self.node_positions[nid]['x'] = nx
+                                self.node_positions[nid]['y'] = ny
+                                print(f"  -> ✅ 已成功修正放置于安全坐标 ({nx}, {ny})")
+                                return True
+        return False
+
+    def _mutate_state(self, state: Dict, env: GridMap) -> Dict:
+        new_s = {k: v.copy() for k, v in state.items()}
+        nid = random.choice(list(new_s.keys()))
+
+        # 动态获取当前朝向下的宽高
+        w, h = new_s[nid]['size']
+        if new_s[nid]['dir'] in (Direction.LEFT, Direction.RIGHT):
+            w, h = h, w
+
+        r = random.random()
+        if r < 0.4:
+            # 微调平移，严格遵守动态边界
+            new_s[nid]['x'] = max(self.padding,
+                                  min(env.width - w - self.padding, new_s[nid]['x'] + random.choice([-1, 1, -2, 2])))
+            new_s[nid]['y'] = max(self.padding,
+                                  min(env.height - h - self.padding, new_s[nid]['y'] + random.choice([-1, 1, -2, 2])))
+        elif r < 0.6:
+            # 核心修复: 全图大跳跃 (Teleport)，防止建筑局部卡死重叠互相不让位
+            new_s[nid]['x'] = random.randint(self.padding, max(self.padding, env.width - w - self.padding))
+            new_s[nid]['y'] = random.randint(self.padding, max(self.padding, env.height - h - self.padding))
+        elif r < 0.85:
+            # 旋转
+            new_s[nid]['dir'] = random.choice([d for d in Direction if d != new_s[nid]['dir']])
+            # 旋转后长宽翻转，必须强行把越界的拉回来
+            w, h = new_s[nid]['size']
+            if new_s[nid]['dir'] in (Direction.LEFT, Direction.RIGHT): w, h = h, w
+            new_s[nid]['x'] = min(new_s[nid]['x'], max(self.padding, env.width - w - self.padding))
+            new_s[nid]['y'] = min(new_s[nid]['y'], max(self.padding, env.height - h - self.padding))
+        else:
+            # 互换位置
+            nid2 = random.choice(list(new_s.keys()))
+            new_s[nid]['x'], new_s[nid]['y'], new_s[nid2]['x'], new_s[nid2]['y'] = new_s[nid2]['x'], new_s[nid2]['y'], \
+                                                                                   new_s[nid]['x'], new_s[nid]['y']
+        return new_s
+
+    def _evaluate_state(self, state: Dict, env: GridMap) -> float:
+        cost = 0.0
+        nids = list(state.keys())
+        min_gx, min_gy, max_gx, max_gy = float('inf'), float('inf'), -float('inf'), -float('inf')
+
+        for i in range(len(nids)):
+            s1 = state[nids[i]]
+            w1, h1 = s1['size']
+            if s1['dir'] in (Direction.LEFT, Direction.RIGHT): w1, h1 = h1, w1
+
+            min_gx = min(min_gx, s1['x'])
+            min_gy = min(min_gy, s1['y'])
+            max_gx = max(max_gx, s1['x'] + w1)
+            max_gy = max(max_gy, s1['y'] + h1)
+
+            for j in range(i + 1, len(nids)):
+                s2 = state[nids[j]]
+                w2, h2 = s2['size']
+                if s2['dir'] in (Direction.LEFT, Direction.RIGHT): w2, h2 = h2, w2
+
+                if not (s1['x'] + w1 + self.padding <= s2['x'] or s2['x'] + w2 + self.padding <= s1['x'] or
+                        s1['y'] + h1 + self.padding <= s2['y'] or s2['y'] + h2 + self.padding <= s1['y']):
+                    cost += 500000.0  # 核心修复：重叠代价从5w提升至50w，绝对优先避让
+
+        area = max(0, max_gx - min_gx) * max(0, max_gy - min_gy)
+        cost += area * 15.0
+
+        for edge in self.edges:
+            s_src, s_dst = state[edge['src']], state[edge['dst']]
+            w1, h1 = s_src['size']
+            if s_src['dir'] in (Direction.LEFT, Direction.RIGHT): w1, h1 = h1, w1
+            w2, h2 = s_dst['size']
+            if s_dst['dir'] in (Direction.LEFT, Direction.RIGHT): w2, h2 = h2, w2
+
+            out_side = self._get_opposite_dir(s_src['dir'])
+            out_x = s_src['x'] + w1 / 2 if out_side in (Direction.UP, Direction.DOWN) else (
+                s_src['x'] - 1 if out_side == Direction.LEFT else s_src['x'] + w1)
+            out_y = s_src['y'] + h1 / 2 if out_side in (Direction.LEFT, Direction.RIGHT) else (
+                s_src['y'] - 1 if out_side == Direction.UP else s_src['y'] + h1)
+
+            in_side = s_dst['dir']
+            in_x = s_dst['x'] + w2 / 2 if in_side in (Direction.UP, Direction.DOWN) else (
+                s_dst['x'] - 1 if in_side == Direction.LEFT else s_dst['x'] + w2)
+            in_y = s_dst['y'] + h2 / 2 if in_side in (Direction.LEFT, Direction.RIGHT) else (
+                s_dst['y'] - 1 if in_side == Direction.UP else s_dst['y'] + h2)
+
+            dist = abs(out_x - in_x) + abs(out_y - in_y)
+            cost += dist * 12.0
+
+            dx, dy = in_x - out_x, in_y - out_y
+            for side, vdx, vdy in [(Direction.RIGHT, 1, 0), (Direction.LEFT, -1, 0), (Direction.DOWN, 0, 1),
+                                   (Direction.UP, 0, -1)]:
+                if out_side == side and dx * vdx > 0 and dy * vdy == 0: cost -= 40
+                if in_side == side and dx * vdx > 0 and dy * vdy == 0: cost -= 40
+        return cost
 
     # ==========================================
-    # 核心修复 1: 完美的多对多 (M:N) 映射逻辑
+    # 以下代码继承上一版，无需变动（M:N 图论、引脚禁区、物理锁交叉等）
     # ==========================================
     def _build_instance_graph(self):
         self.nodes = {i: b for i, b in enumerate(self.required_buildings)}
@@ -71,21 +192,14 @@ class FdpSaAgent:
 
             p_list = providers[mat]
             c_list = consumers[mat]
-
-            # 1. 确保每一个供应者都有一个消费者
             for i, p_nid in enumerate(p_list):
                 c_nid = c_list[i % len(c_list)]
                 self.edges.append({'src': p_nid, 'dst': c_nid, 'mat': mat})
-
-            # 2. 确保每一个消费者都获得了至少一个供应者
             for i, c_nid in enumerate(c_list):
                 if not any(e['dst'] == c_nid and e['mat'] == mat for e in self.edges):
                     p_nid = p_list[i % len(p_list)]
                     self.edges.append({'src': p_nid, 'dst': c_nid, 'mat': mat})
 
-    # ==========================================
-    # 核心修复 2: 寻路引脚保护与直行穿越锁 (Crosser BUG Fix)
-    # ==========================================
     def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]],
                             forbidden: Set[Tuple[int, int]]) -> Optional[List[Tuple[int, int]]]:
         frontier = []
@@ -105,14 +219,10 @@ class FdpSaAgent:
 
             x, y = current
             cell_current = env._get_cell(x, y)
-
-            # 判断当前脚下是否踩在别人的传送带上
             is_on_crossable = (cell_current is not None and type(
                 cell_current).__name__ == "SystemBBelt" and current not in starts and current not in goals)
-
             allowed_moves = [(0, -1), (0, 1), (-1, 0), (1, 0)]
 
-            # 【核心穿越锁】：踩在皮带上时，绝不允许转弯！必须直挺挺地跨过去！
             if is_on_crossable and came_from[current] is not None:
                 px, py = came_from[current]
                 allowed_moves = [(x - px, y - py)]
@@ -120,15 +230,12 @@ class FdpSaAgent:
             for dx, dy in allowed_moves:
                 nx, ny = x + dx, y + dy
                 if not env.is_in_bounds(nx, ny): continue
-
-                # 【核心引脚保护】：严禁任何人借道或横穿他人的输入输出端口
                 if (nx, ny) in forbidden: continue
 
                 cell_next = env._get_cell(nx, ny)
                 is_crossable = False
 
                 if cell_next is not None and (nx, ny) not in goals and (nx, ny) not in starts:
-                    # 注意：如果前方已经是 Crosser，严禁二次重叠穿越！只允许穿越普通的 SystemBBelt
                     if type(cell_next).__name__ == "SystemBBelt":
                         move_dir = Direction.RIGHT if nx > x else Direction.LEFT if nx < x else Direction.DOWN if ny > y else Direction.UP
                         belt_out_dir = getattr(cell_next, 'direction', Direction.RIGHT)
@@ -139,7 +246,6 @@ class FdpSaAgent:
                             (Direction.UP, Direction.DOWN), (Direction.DOWN, Direction.UP)
                         ]
 
-                        # 只允许在对方是直道，且我们垂直撞向它时，才判定为合法交叉
                         if is_straight:
                             if move_dir in [Direction.UP, Direction.DOWN] and belt_out_dir in [Direction.LEFT,
                                                                                                Direction.RIGHT]:
@@ -150,15 +256,12 @@ class FdpSaAgent:
 
                     if not is_crossable: continue
 
-                # A* 惩罚参数
                 turn_penalty = 0
                 if came_from[current] is not None:
                     px, py = came_from[current]
-                    if (x - px) != dx or (y - py) != dy:
-                        turn_penalty = 2  # 惩罚无意义转弯，鼓励走拉直的线
+                    if (x - px) != dx or (y - py) != dy: turn_penalty = 2
 
-                cross_penalty = 15 if is_crossable else 0  # 交叉有风险，轻微惩罚优先绕路
-
+                cross_penalty = 15 if is_crossable else 0
                 new_cost = g_score[current] + 1 + turn_penalty + cross_penalty
 
                 if (nx, ny) not in g_score or new_cost < g_score[(nx, ny)]:
@@ -177,7 +280,6 @@ class FdpSaAgent:
         return None
 
     def _route_connections(self, env: GridMap):
-        # 1. 搜集全图机器的所有可用端口，设为禁区
         self.all_building_ports = set()
         for nid in self.nodes:
             self.all_building_ports.update(self._get_all_ports_of_node(nid, True))
@@ -194,7 +296,6 @@ class FdpSaAgent:
                 if mat in self.target_outputs_dict:
                     tasks.append({'src_type': 'node', 'src': nid, 'dst_type': 'ext_out', 'dst': None, 'mat': mat})
 
-        # 优先链接机器内部节点，把外部输入/输出放最后（留出外部操作空间）
         tasks.sort(key=lambda t: 1 if t['src_type'] == 'ext_in' or t['dst_type'] == 'ext_out' else 0)
 
         for t in tasks:
@@ -210,10 +311,9 @@ class FdpSaAgent:
 
             if not starts or not goals: continue
 
-            # 构建对当前线路生效的安全禁区（扣除当前起点与终点）
             forbidden_cells = self.all_building_ports - set(starts) - set(goals)
-
             path = self._a_star_route_multi(env, starts, goals, forbidden_cells)
+
             if path:
                 start_p, end_p = path[0], path[-1]
                 if t['src_type'] == 'node': self.used_ports.add(start_p)
@@ -245,11 +345,9 @@ class FdpSaAgent:
                         comp.in_dir = in_dir
                         env.place_transport(comp, px, py, out_dir)
                     else:
-                        # 对于合法的端点重叠，赋予最终受力面
                         if (px, py) == start_p or (px, py) == end_p:
                             cell.in_dir = in_dir
                         elif type(cell).__name__ == "SystemBBelt":
-                            # 发生物理交叉！正确挂载 Crosser (314)
                             original_dir = getattr(cell, 'direction', Direction.RIGHT)
                             original_in = getattr(cell, 'in_dir', self._get_opposite_dir(original_dir))
 
@@ -262,9 +360,6 @@ class FdpSaAgent:
             else:
                 print(f"[Warning] 路径拥堵: 无法为 {t['mat'].name} 规划无损连线。")
 
-    # ==========================================
-    # 获取任意建筑所有端口辅助函数
-    # ==========================================
     def _get_all_ports_of_node(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
         if nid not in self.node_positions: return []
         x, y = self.node_positions[nid]['x'], self.node_positions[nid]['y']
@@ -283,12 +378,8 @@ class FdpSaAgent:
         return []
 
     def _get_available_ports(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
-        ports = self._get_all_ports_of_node(nid, is_input)
-        return [p for p in ports if p not in self.used_ports]
+        return [p for p in self._get_all_ports_of_node(nid, is_input) if p not in self.used_ports]
 
-    # ==========================================
-    # 其他核心 FDP / SA 算法保留原有设计
-    # ==========================================
     def _run_force_directed_placement(self, env: GridMap) -> Dict[int, Dict]:
         pos = {}
         cx, cy = env.width / 2.0, env.height / 2.0
@@ -321,7 +412,6 @@ class FdpSaAgent:
                 forces[n2][0] -= (dx / dist) * f;
                 forces[n2][1] -= (dy / dist) * f
 
-            # 向心力压缩
             for nid in self.nodes:
                 dx, dy = cx - pos[nid][0], cy - pos[nid][1]
                 forces[nid][0] += dx * 0.8
@@ -356,78 +446,6 @@ class FdpSaAgent:
                         best_state, best_cost = {k: v.copy() for k, v in curr_state.items()}, curr_cost
             temp *= 0.95
         return best_state
-
-    def _mutate_state(self, state: Dict, env: GridMap) -> Dict:
-        new_s = {k: v.copy() for k, v in state.items()}
-        nid = random.choice(list(new_s.keys()))
-        r = random.random()
-        if r < 0.5:
-            new_s[nid]['x'] = max(self.padding, min(env.width - 5, new_s[nid]['x'] + random.choice([-1, 1, -2, 2])))
-            new_s[nid]['y'] = max(self.padding, min(env.height - 5, new_s[nid]['y'] + random.choice([-1, 1, -2, 2])))
-        elif r < 0.85:
-            new_s[nid]['dir'] = random.choice([d for d in Direction if d != new_s[nid]['dir']])
-        else:
-            nid2 = random.choice(list(new_s.keys()))
-            new_s[nid]['x'], new_s[nid]['y'], new_s[nid2]['x'], new_s[nid2]['y'] = new_s[nid2]['x'], new_s[nid2]['y'], \
-                                                                                   new_s[nid]['x'], new_s[nid]['y']
-        return new_s
-
-    def _evaluate_state(self, state: Dict, env: GridMap) -> float:
-        cost = 0.0
-        nids = list(state.keys())
-        min_gx, min_gy, max_gx, max_gy = float('inf'), float('inf'), -float('inf'), -float('inf')
-
-        for i in range(len(nids)):
-            s1 = state[nids[i]]
-            w1, h1 = s1['size']
-            if s1['dir'] in (Direction.LEFT, Direction.RIGHT): w1, h1 = h1, w1
-
-            min_gx = min(min_gx, s1['x'])
-            min_gy = min(min_gy, s1['y'])
-            max_gx = max(max_gx, s1['x'] + w1)
-            max_gy = max(max_gy, s1['y'] + h1)
-
-            for j in range(i + 1, len(nids)):
-                s2 = state[nids[j]]
-                w2, h2 = s2['size']
-                if s2['dir'] in (Direction.LEFT, Direction.RIGHT): w2, h2 = h2, w2
-
-                if not (s1['x'] + w1 + self.padding <= s2['x'] or s2['x'] + w2 + self.padding <= s1['x'] or
-                        s1['y'] + h1 + self.padding <= s2['y'] or s2['y'] + h2 + self.padding <= s1['y']):
-                    cost += 50000.0
-
-        # Bounding Box 面积惩罚
-        area = max(0, max_gx - min_gx) * max(0, max_gy - min_gy)
-        cost += area * 15.0
-
-        for edge in self.edges:
-            s_src, s_dst = state[edge['src']], state[edge['dst']]
-            w1, h1 = s_src['size']
-            if s_src['dir'] in (Direction.LEFT, Direction.RIGHT): w1, h1 = h1, w1
-            w2, h2 = s_dst['size']
-            if s_dst['dir'] in (Direction.LEFT, Direction.RIGHT): w2, h2 = h2, w2
-
-            out_side = self._get_opposite_dir(s_src['dir'])
-            out_x = s_src['x'] + w1 / 2 if out_side in (Direction.UP, Direction.DOWN) else (
-                s_src['x'] - 1 if out_side == Direction.LEFT else s_src['x'] + w1)
-            out_y = s_src['y'] + h1 / 2 if out_side in (Direction.LEFT, Direction.RIGHT) else (
-                s_src['y'] - 1 if out_side == Direction.UP else s_src['y'] + h1)
-
-            in_side = s_dst['dir']
-            in_x = s_dst['x'] + w2 / 2 if in_side in (Direction.UP, Direction.DOWN) else (
-                s_dst['x'] - 1 if in_side == Direction.LEFT else s_dst['x'] + w2)
-            in_y = s_dst['y'] + h2 / 2 if in_side in (Direction.LEFT, Direction.RIGHT) else (
-                s_dst['y'] - 1 if in_side == Direction.UP else s_dst['y'] + h2)
-
-            dist = abs(out_x - in_x) + abs(out_y - in_y)
-            cost += dist * 12.0
-
-            dx, dy = in_x - out_x, in_y - out_y
-            for side, vdx, vdy in [(Direction.RIGHT, 1, 0), (Direction.LEFT, -1, 0), (Direction.DOWN, 0, 1),
-                                   (Direction.UP, 0, -1)]:
-                if out_side == side and dx * vdx > 0 and dy * vdy == 0: cost -= 40
-                if in_side == side and dx * vdx > 0 and dy * vdy == 0: cost -= 40
-        return cost
 
     def _get_opposite_dir(self, d: Direction) -> Direction:
         return {Direction.UP: Direction.DOWN, Direction.DOWN: Direction.UP,

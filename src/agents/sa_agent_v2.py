@@ -11,7 +11,7 @@ from entities.material import MaterialType
 from agents.utils import get_recipe_catalog
 
 
-class SABaselineAgent:
+class SAAgentV2:
     def __init__(self, target_outputs: Dict[MaterialType, float], available_inputs: List[MaterialType]):
         self.target_outputs_dict = target_outputs
         self.available_inputs = available_inputs

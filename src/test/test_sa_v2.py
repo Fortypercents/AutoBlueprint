@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment.grid_map import GridMap
 from entities.material import MaterialType
-from agents.sa_baseline_agent import SABaselineAgent
+from agents.sa_agent_v2 import SAAgentV2
 from utils.test_utils import render_system_b_blueprint
 
 
@@ -15,7 +15,7 @@ def run_advanced_sa_test():
     env = GridMap(35, 35)
 
     # 设立目标：2蓝铁锭 -> 1蓝铁瓶。由于我们加入了“产能感知”，Agent 会自动计算需要几台机器。
-    agent = SABaselineAgent(
+    agent = SAAgentV2(
         target_outputs={MaterialType.BLUE_IRON_BOTTLE: 3.0},
         available_inputs=[MaterialType.BLUE_IRON]
     )
