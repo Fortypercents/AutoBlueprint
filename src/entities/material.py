@@ -49,6 +49,8 @@ class MaterialType(Enum):
     # ==========================================
     APPLE_SEED = auto()  # 苹果种子
     APPLE = auto()  # 苹果
+    SANDLEAF_SEED = auto()  # 砂叶种子
+    SANDLEAF = auto()  # 砂叶
 
     # ==========================================
     # 2. 矿物生产链
@@ -68,14 +70,20 @@ class MaterialType(Enum):
     CRYSTAL_SHELL_POWDER = auto()  # 晶体外壳粉末
     AMETHYST_POWDER = auto()  # 紫晶粉
     BLUE_IRON_POWDER = auto()  # 蓝铁粉
+    SANDLEAF_POWDER = auto()  # 砂叶粉末
+    DENSE_BLUE_IRON_POWDER = auto()  # 致密蓝铁粉末
+    DENSE_ORIGINIUM_POWDER = auto()  # 致密源石粉末
     AMETHYST_PART = auto()  # 紫晶零件
     BLUE_IRON_PART = auto()  # 蓝铁零件
+    STEEL_BLOCK = auto()  # 钢块
+    STEEL_PART = auto()  # 钢制零件
     AMETHYST_BOTTLE = auto()  # 紫晶瓶
     BLUE_IRON_BOTTLE = auto()  # 蓝铁瓶
 
     # [三级产物]
     LOW_CAP_BATTERY = auto()  # 低容谷地电池
     MID_CAP_BATTERY = auto()  # 中容谷地电池
+    HIGH_CAP_BATTERY = auto()  # 高容谷地电池
 
 
 class Material:

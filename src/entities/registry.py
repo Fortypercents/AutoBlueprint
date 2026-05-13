@@ -183,6 +183,79 @@ pack_mid.allowed_input_materials = [MaterialType.BLUE_IRON_PART, MaterialType.OR
 pack_mid.max_inventory = 200.0
 BUILDING_CATALOG[552] = pack_mid
 
+# ---------------- 6. 新增高容电池生产链 ----------------
+# 砂叶种子 -> 砂叶
+planter_sandleaf = SystemBBuilding(component_id=403, size=(4, 4), name="种植机(砂叶)")
+planter_sandleaf.needs_input, planter_sandleaf.needs_output = True, True
+planter_sandleaf.input_materials = {MaterialType.SANDLEAF_SEED: 1.0}
+planter_sandleaf.output_materials = {MaterialType.SANDLEAF: 1.0}
+planter_sandleaf.allowed_input_materials = [MaterialType.SANDLEAF_SEED]
+planter_sandleaf.max_inventory = 20.0
+BUILDING_CATALOG[403] = planter_sandleaf
+
+# 砂叶 -> 砂叶种子
+seed_extractor_sandleaf = SystemBBuilding(component_id=404, size=(4, 4), name="采种机(砂叶)")
+seed_extractor_sandleaf.needs_input, seed_extractor_sandleaf.needs_output = True, True
+seed_extractor_sandleaf.input_materials = {MaterialType.SANDLEAF: 1.0}
+seed_extractor_sandleaf.output_materials = {MaterialType.SANDLEAF_SEED: 2.0}
+seed_extractor_sandleaf.allowed_input_materials = [MaterialType.SANDLEAF]
+seed_extractor_sandleaf.max_inventory = 20.0
+BUILDING_CATALOG[404] = seed_extractor_sandleaf
+
+# 砂叶 -> 砂叶粉末
+crusher_sandleaf = SystemBBuilding(component_id=525, size=(3, 3), name="粉碎机(砂叶)")
+crusher_sandleaf.needs_input, crusher_sandleaf.needs_output = True, True
+crusher_sandleaf.input_materials = {MaterialType.SANDLEAF: 1.0}
+crusher_sandleaf.output_materials = {MaterialType.SANDLEAF_POWDER: 2.0}
+crusher_sandleaf.allowed_input_materials = [MaterialType.SANDLEAF]
+crusher_sandleaf.max_inventory = 50.0
+BUILDING_CATALOG[525] = crusher_sandleaf
+
+# 蓝铁粉末 + 砂叶粉末 -> 致密蓝铁粉末
+grinder_dense_iron = SystemBBuilding(component_id=561, size=(6, 4), name="研磨机(致密蓝铁)")
+grinder_dense_iron.needs_input, grinder_dense_iron.needs_output = True, True
+grinder_dense_iron.input_materials = {MaterialType.BLUE_IRON_POWDER: 1.2, MaterialType.SANDLEAF_POWDER: 1.0}
+grinder_dense_iron.output_materials = {MaterialType.DENSE_BLUE_IRON_POWDER: 1.0}
+grinder_dense_iron.allowed_input_materials = [MaterialType.BLUE_IRON_POWDER, MaterialType.SANDLEAF_POWDER]
+grinder_dense_iron.max_inventory = 100.0
+BUILDING_CATALOG[561] = grinder_dense_iron
+
+# 源石粉末 + 砂叶粉末 -> 致密源石粉末
+grinder_dense_originium = SystemBBuilding(component_id=562, size=(6, 4), name="研磨机(致密源石)")
+grinder_dense_originium.needs_input, grinder_dense_originium.needs_output = True, True
+grinder_dense_originium.input_materials = {MaterialType.ORIGINIUM_POWDER: 2.2, MaterialType.SANDLEAF_POWDER: 1.0}
+grinder_dense_originium.output_materials = {MaterialType.DENSE_ORIGINIUM_POWDER: 1.0}
+grinder_dense_originium.allowed_input_materials = [MaterialType.ORIGINIUM_POWDER, MaterialType.SANDLEAF_POWDER]
+grinder_dense_originium.max_inventory = 100.0
+BUILDING_CATALOG[562] = grinder_dense_originium
+
+# 致密蓝铁粉末 -> 钢块
+refinery_steel = SystemBBuilding(component_id=514, size=(3, 3), name="精炼炉(钢块)")
+refinery_steel.needs_input, refinery_steel.needs_output = True, True
+refinery_steel.input_materials = {MaterialType.DENSE_BLUE_IRON_POWDER: 1.0}
+refinery_steel.output_materials = {MaterialType.STEEL_BLOCK: 1.0}
+refinery_steel.allowed_input_materials = [MaterialType.DENSE_BLUE_IRON_POWDER]
+refinery_steel.max_inventory = 50.0
+BUILDING_CATALOG[514] = refinery_steel
+
+# 钢块 -> 钢制零件
+part_steel = SystemBBuilding(component_id=533, size=(3, 3), name="配件机(钢制零件)")
+part_steel.needs_input, part_steel.needs_output = True, True
+part_steel.input_materials = {MaterialType.STEEL_BLOCK: 1.0}
+part_steel.output_materials = {MaterialType.STEEL_PART: 1.0}
+part_steel.allowed_input_materials = [MaterialType.STEEL_BLOCK]
+part_steel.max_inventory = 50.0
+BUILDING_CATALOG[533] = part_steel
+
+# 钢制零件 + 致密源石粉末 -> 高容谷地电池
+pack_high = SystemBBuilding(component_id=553, size=(5, 3), name="封装机(高容)")
+pack_high.needs_input, pack_high.needs_output = True, True
+pack_high.input_materials = {MaterialType.STEEL_PART: 2.0, MaterialType.DENSE_ORIGINIUM_POWDER: 3.0}
+pack_high.output_materials = {MaterialType.HIGH_CAP_BATTERY: 1.0}
+pack_high.allowed_input_materials = [MaterialType.STEEL_PART, MaterialType.DENSE_ORIGINIUM_POWDER]
+pack_high.max_inventory = 200.0
+BUILDING_CATALOG[553] = pack_high
+
 
 # ==========================================
 # 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)

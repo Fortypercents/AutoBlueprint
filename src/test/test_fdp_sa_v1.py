@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from environment.grid_map import GridMap
 from entities.material import MaterialType
-from agents.fdp_sa_agent import FdpSaAgent
+from agents.fdp_sa_agent_v1 import FdpSaAgent
 from utils.test_utils import render_system_b_blueprint
 
 def run_test():

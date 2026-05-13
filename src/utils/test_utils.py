@@ -20,20 +20,22 @@ def _get_building_cell_str(building, cx, cy):
     else:
         if rx == w // 2 and ry == h // 2:
             cid = getattr(building, 'component_id', 0)
-            if cid in [511, 512, 513]:
+            if cid in [511, 512, 513, 514]:
                 abbr = "REF"
-            elif cid in [521, 522, 523, 524]:
+            elif cid in [521, 522, 523, 524, 525]:
                 abbr = "CRU"
-            elif cid in [531, 532]:
+            elif cid in [531, 532, 533]:
                 abbr = "PRT"
             elif cid in [541, 542]:
                 abbr = "PRS"
-            elif cid in [551, 552]:
+            elif cid in [551, 552, 553]:
                 abbr = "PAK"
-            elif cid == 401:
+            elif cid in [401, 403]:
                 abbr = "PLT"
-            elif cid == 402:
+            elif cid in [402, 404]:
                 abbr = "EXT"
+            elif cid in [561, 562]:
+                abbr = "GRD"
             else:
                 abbr = str(cid)[:3].center(3)
             return abbr
