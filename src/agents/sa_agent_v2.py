@@ -23,29 +23,32 @@ class SAAgentV2:
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
         self.route_paths = {}
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
 
-        # SA 基础参数
+        # Implementation note.
         self.initial_temp = 2000.0
         self.cooling_rate = 0.96
         self.min_temp = 1.0
         self.iters_per_temp = 150
 
-        # 【新增】动态布线死锁记忆池
+        # Routing logic.
         self.routing_penalties = defaultdict(float)
 
     def optimize(self, env: GridMap):
-        print("\n[SABaselineAgent] Phase 1: 构建产能感知有向无环图 (DAG)...")
+        print('Agent status message.')
         self._build_capacity_aware_dag()
 
-        # 【核心架构修改】：引入大反馈循环 (Global Feedback Loop)
+        # Implementation note.
         max_layout_retries = 6
         for attempt in range(max_layout_retries):
-            print(f"\n[SABaselineAgent] 启动全局拓扑优化 - 第 {attempt + 1}/{max_layout_retries} 轮迭代")
+            print(f"[SABaselineAgent] Global topology optimisation attempt {attempt + 1}/{max_layout_retries}")
 
-            # 清理环境，确保每次重试都是一张白纸
+            # Implementation note.
             self._clear_environment(env)
 
-            print("[SABaselineAgent] Phase 2: 布线感知型模拟退火布局...")
+            print('Routing status message.')
             best_state = self._run_simulated_annealing(env)
             self.node_positions = best_state
 
@@ -53,21 +56,21 @@ class SAAgentV2:
                 building = self.nodes[nid]
                 env.place_building(building, x, y, d)
 
-            print("[SABaselineAgent] Phase 3: 严格受理约束的精准布线...")
+            print('Routing status message.')
             success = self._route_connections_with_rip_up(env)
 
             if success:
-                print("\n[SABaselineAgent] >>> 布线100%连通，蓝图生成成功！ <<<")
+                print('Operation completed successfully.')
                 break
             else:
-                print(f"\n[SABaselineAgent] 警告：本轮存在无法化解的物理死锁。触发反馈机制，降温重构...")
-                # 降低初始温度，保留部分好的结构，但强制拆散导致死锁的区域
+                print("AutoBlueprint status message.")
+                # Implementation note.
                 self.initial_temp *= 0.85
         else:
-            print("\n[SABaselineAgent] 达到最大退火重试上限，输出尽力而为的部分连通蓝图。")
+            print('Agent status message.')
 
     def _clear_environment(self, env: GridMap):
-        """完全格式化当前地图，准备下一次退火放置"""
+        'AutoBlueprint status message.'
         env.buildings.clear()
         env.transports.clear()
         for y in range(env.height):
@@ -77,9 +80,12 @@ class SAAgentV2:
         self.generated_inputs.clear()
         self.generated_outputs.clear()
         self.route_paths.clear()
+        self.failed_routes.clear()
+        self.external_io_paths.clear()
+        self.internal_route_paths.clear()
 
     # ==========================================
-    # Phase 1: DAG 生成 (保持不变)
+    # Implementation note.
     # ==========================================
     def _build_capacity_aware_dag(self):
         demand_queue = {k: v for k, v in self.target_outputs_dict.items()}
@@ -132,7 +138,7 @@ class SAAgentV2:
                             demand -= transfer
 
     # ==========================================
-    # Phase 2: Routing-Aware SA (引入外部引脚保护与死锁惩罚)
+    # Cost and penalty calculation.
     # ==========================================
     def _get_side_ports(self, nid: int, state: Dict, is_input: bool) -> List[Tuple[int, int]]:
         x, y, d = state[nid]
@@ -192,7 +198,7 @@ class SAAgentV2:
             global_min_x, global_min_y = min(global_min_x, x), min(global_min_y, y)
             global_max_x, global_max_y = max(global_max_x, x + w), max(global_max_y, y + h)
 
-        # 1格 Padding 防止挤死
+        # Implementation note.
         for i in range(len(nids)):
             for j in range(i + 1, len(nids)):
                 x1, y1, d1 = state[nids[i]]
@@ -219,8 +225,8 @@ class SAAgentV2:
                 if x <= px < x + w and y <= py < y + h:
                     cost += 10000.0
 
-        # 【核心修复1】：极大增强外部原料和产物的上下边缘引导权重 (从 2.0 提升到 40.0)
-        # 强制系统将进货口和最终产出口推向物流安全区，防止被包裹
+        # Implementation note.
+        # Implementation note.
         for nid, (x, y, d) in state.items():
             b = self.nodes[nid]
             if any(m in self.available_inputs for m in b.input_materials):
@@ -228,8 +234,8 @@ class SAAgentV2:
             if any(m in self.target_outputs_dict for m in b.output_materials):
                 cost += (env.height - y) * 40.0
 
-                # 【核心修复2】：融合上一轮失败的死锁惩罚记忆 (Dynamic Repulsion)
-        # 如果某条线或某个输入输出节点在 Phase 3 死锁过，这里会施加极高惩罚强迫它们重组
+                # Cost and penalty calculation.
+        # Input/output port handling.
         for t_id, penalty_multiplier in self.routing_penalties.items():
             if t_id.startswith("edge_"):
                 _, src, dst, _ = t_id.split("_", 3)
@@ -268,17 +274,18 @@ class SAAgentV2:
         return new_state
 
     # ==========================================
-    # Phase 3: 严格物理布线与全局失败反馈 (Global Failure Feedback)
+    # Routing logic.
     # ==========================================
     def _get_available_ports(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
         ports = self._get_side_ports(nid, self.node_positions, is_input)
         return [p for p in ports if p not in self.used_ports]
 
     def _route_connections_with_rip_up(self, env: GridMap) -> bool:
+        self.failed_routes = []
         routing_tasks = []
 
         for i, edge in enumerate(self.edges):
-            # 将 ID 格式化，以便被惩罚系统精准识别
+            # Cost and penalty calculation.
             routing_tasks.append({
                 'id': f"edge_{edge['src']}_{edge['dst']}_{edge['mat']}",
                 'src_type': 'node', 'src': edge['src'], 'dst_type': 'node', 'dst': edge['dst'],
@@ -330,7 +337,7 @@ class SAAgentV2:
                 self.route_paths[t['id']] = set(path)
                 self._lay_physical_belts(env, path, t)
             else:
-                # 定向拆解：拆解最后铺的2条线，腾出空间
+                # Implementation note.
                 if routed_history:
                     recent_keys = list(routed_history.keys())[-2:]
                     for r_key in recent_keys:
@@ -340,13 +347,15 @@ class SAAgentV2:
                         failed_queue.appendleft(next(task for task in routing_tasks if task['id'] == r_key))
                 failed_queue.appendleft(t)
 
-        # 【核心修复3】：布线结束判定。如果队列仍未清空，说明是结构性死锁
+        # Routing logic.
         if failed_queue:
-            # 记录失败任务到全局黑名单中，大幅增加惩罚权重，交由下一轮 Phase 2 化解
+            # Cost and penalty calculation.
+            self.failed_routes = list(failed_queue)
             for t in failed_queue:
                 self.routing_penalties[t['id']] += 20.0
             return False
 
+        self.failed_routes = []
         return True
 
     def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]):
@@ -419,6 +428,10 @@ class SAAgentV2:
 
     def _lay_physical_belts(self, env: GridMap, path: List[Tuple[int, int]], task: Dict):
         start_port, end_port = path[0], path[-1]
+        if task['src_type'] == 'ext_in' or task['dst_type'] == 'ext_out':
+            self.external_io_paths.append(set(path))
+        else:
+            self.internal_route_paths.append(set(path))
         if task['src_type'] == 'node': self.used_ports.add(start_port)
         if task['dst_type'] == 'node': self.used_ports.add(end_port)
         if task['src_type'] == 'ext_in': self.generated_inputs[task['mat']].append(start_port)

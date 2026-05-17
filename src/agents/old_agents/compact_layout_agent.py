@@ -9,20 +9,16 @@ from agents.base_agent import BaseAgent
 
 
 class CompactLayoutAgent(BaseAgent):
-    """
-    SystemA 专属紧凑布局智能体 (Direct-Insertion Agent)
-    充分利用 SystemA 的“全向接口”与“相邻建筑直接传输”特性，
-    免除中间传送带，实现极限压缩的“机器矩阵”。
-    """
+    'Layout status message.'
 
     def __init__(self, target_outputs, ext_in=(0, 2), ext_out=(31, 20)):
         super().__init__(target_outputs)
         self.ext_in = ext_in
         self.ext_out = ext_out
-        self.belt_id = 101  # 使用 SystemA 标准传送带
+        self.belt_id = 101  # Implementation note.
 
     def _sort_buildings_by_dependency(self) -> List[Building]:
-        """拓扑排序，确保先放置上游机器"""
+        'AutoBlueprint status message.'
         sorted_buildings = []
         pending = list(self.required_buildings)
         available_mats = set(self.raw_material_inputs.keys())
@@ -30,7 +26,7 @@ class CompactLayoutAgent(BaseAgent):
         while pending:
             ready_buildings = [b for b in pending if all(mat in available_mats for mat in b.input_materials)]
             if not ready_buildings:
-                print("⚠️ 警告：检测到配方死锁或缺失前置原料！")
+                print('Warning: planning issue detected.')
                 sorted_buildings.extend(pending)
                 break
 
@@ -44,26 +40,26 @@ class CompactLayoutAgent(BaseAgent):
 
     def _is_adjacent(self, x1: int, y1: int, w1: int, h1: int,
                      x2: int, y2: int, w2: int, h2: int) -> bool:
-        """数学校验：判断两个矩形边界是否刚好贴合 (共享一条边)"""
-        # 横向贴合 (左右相邻)，且纵向必须有重叠交集
+        'AutoBlueprint status message.'
+        # Implementation note.
         if (x1 + w1 == x2 or x2 + w2 == x1):
             if max(y1, y2) < min(y1 + h1, y2 + h2):
                 return True
-        # 纵向贴合 (上下相邻)，且横向必须有重叠交集
+        # Implementation note.
         if (y1 + h1 == y2 or y2 + h2 == y1):
             if max(x1, x2) < min(x1 + w1, x2 + w2):
                 return True
         return False
 
     def _get_empty_perimeter(self, env: GridMap, b: Building) -> Optional[Tuple[int, int]]:
-        """在建筑周围寻找一个完全空的格子，用于接入或接出传送带"""
+        'Layout status message.'
         for px, py in env.get_perimeter_coords(b):
             if env._get_cell(px, py) is None:
                 return (px, py)
         return None
 
     # ==========================================
-    # A* 寻路 (仅用于外部物流，不再用于机器之间)
+    # Routing logic.
     # ==========================================
     def _manhattan_distance(self, p1: Tuple[int, int], p2: Tuple[int, int]) -> int:
         return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
@@ -110,10 +106,10 @@ class CompactLayoutAgent(BaseAgent):
         return None
 
     def _build_belt_path(self, env: GridMap, path: List[Tuple[int, int]], start_pos: Tuple[int, int]):
-        """根据 A* 路径铺设传送带，并自动修复拐角朝向"""
+        'Routing status message.'
         if not path: return
 
-        # 修复起点的传送带朝向
+        # Implementation note.
         sx, sy = start_pos
         source_belt = env._get_cell(sx, sy)
         if isinstance(source_belt, TransportComponent):
@@ -127,7 +123,7 @@ class CompactLayoutAgent(BaseAgent):
             else:
                 source_belt.direction = Direction.UP
 
-        # 铺设沿途传送带
+        # Implementation note.
         for step_idx in range(len(path)):
             px, py = path[step_idx]
             if step_idx < len(path) - 1:
@@ -141,18 +137,18 @@ class CompactLayoutAgent(BaseAgent):
                 else:
                     belt_dir = Direction.UP
             else:
-                belt_dir = Direction.DOWN  # 终点默认朝向，稍后会被强制修正
+                belt_dir = Direction.DOWN  # Implementation note.
 
             if env._get_cell(px, py) is None:
                 belt = get_transport_instance(self.belt_id)
                 env.place_transport(belt, px, py, belt_dir)
 
     def optimize(self, env: GridMap):
-        print("\n【Agent 思考中】启用 SystemA 紧凑矩阵直连模式...")
+        print('Agent status message.')
         self.calculate_production_chain()
         ordered_buildings = self._sort_buildings_by_dependency()
 
-        # 字典记录：哪种物料是由【哪座建筑对象】产出的
+        # Building placement logic.
         available_sources: Dict[Any, Any] = {}
         main_input_mat = list(self.raw_material_inputs.keys())[0] if self.raw_material_inputs else None
 
@@ -168,21 +164,21 @@ class CompactLayoutAgent(BaseAgent):
             provider = available_sources.get(req_mat)
 
             if provider == "EXT_IN":
-                print(f" -> 放置源头机器: {b.name}")
-                # 第一台机器：放在左上角附近，并从外部拉传送带接入
+                print(f"Layout status for building: {b.name}")
+                # Implementation note.
                 for y in range(2, 6):
                     if placed: break
                     for x in range(2, 6):
                         if env.can_place_building(b, x, y):
                             env.place_building(b, x, y)
 
-                            # 找一个空位接入传送带
+                            # Implementation note.
                             target_in = self._get_empty_perimeter(env, b)
                             path = self.find_path_astar(env, self.ext_in, target_in)
 
                             if path is not None:
                                 self._build_belt_path(env, path, self.ext_in)
-                                # 强制让最后一格传送带指着机器
+                                # Implementation note.
                                 last_belt = env._get_cell(target_in[0], target_in[1])
                                 if last_belt:
                                     if target_in[0] < x:
@@ -196,47 +192,47 @@ class CompactLayoutAgent(BaseAgent):
 
                                 placed = True
                                 for out_mat in b.output_materials:
-                                    available_sources[out_mat] = b  # 注册建筑对象自身为资源源
+                                    available_sources[out_mat] = b  # Building placement logic.
                                 break
 
             elif isinstance(provider, Building):
-                print(f" -> 尝试紧贴上游机器直接插入: {b.name}")
-                # 后续机器：直接寻找上游机器的四周边界，吸附放置！
+                print(f"Layout status for building: {b.name}")
+                # Building placement logic.
                 px, py = provider.anchor_pos
                 pw, ph = provider.size
 
-                # 仅在上游建筑的扩展 1 圈范围内搜索 (极大地加快了运算速度)
+                # Building placement logic.
                 for y in range(max(0, py - bh), min(env.height - bh, py + ph + 1)):
                     if placed: break
                     for x in range(max(0, px - bw), min(env.width - bw, px + pw + 1)):
-                        # 判断坐标是否正好贴合上游机器
+                        # Implementation note.
                         if self._is_adjacent(x, y, bw, bh, px, py, pw, ph):
                             if env.can_place_building(b, x, y):
                                 env.place_building(b, x, y)
                                 placed = True
-                                print(f"   ✅ [矩阵吸附成功] 无需传送带，紧贴放置在 ({x}, {y})")
+                                print("AutoBlueprint status message.")
                                 for out_mat in b.output_materials:
                                     available_sources[out_mat] = b
                                 break
 
             if not placed:
-                print(f"   ❌ 严重警告：无法为 {b.name} 找到空间！")
+                print(f"Layout status for building: {b.name}")
 
         # ==========================================
-        # 终点输出连接
+        # Input/output port handling.
         # ==========================================
         target_mat = list(self.target_outputs.keys())[0]
         final_provider = available_sources.get(target_mat)
 
         if isinstance(final_provider, Building):
-            print(f" -> 从矩阵终端提取 {target_mat.name} 连接至出口 ...")
+            print(f"Connecting final output for {target_mat.name}.")
             out_start = self._get_empty_perimeter(env, final_provider)
 
             if out_start:
                 belt = get_transport_instance(self.belt_id)
-                env.place_transport(belt, out_start[0], out_start[1], Direction.RIGHT)  # 初始方向，下面会修正
+                env.place_transport(belt, out_start[0], out_start[1], Direction.RIGHT)  # Implementation note.
 
-                # 修正引出传送带的朝向(背对机器)
+                # Implementation note.
                 px, py = final_provider.anchor_pos
                 pw, ph = final_provider.size
                 if out_start[0] < px:
@@ -251,7 +247,7 @@ class CompactLayoutAgent(BaseAgent):
                 final_path = self.find_path_astar(env, out_start, self.ext_out)
                 if final_path:
                     self._build_belt_path(env, final_path, out_start)
-                    print("   ✅ 终端物流贯通！")
+                    print('AutoBlueprint status message.')
 
     def render_blueprint(self, env: GridMap, tick: int = 0, current_yield: Dict = None):
         yield_str = ", ".join([f"[{getattr(m, 'name', str(m))}]: {v}" for m, v in (current_yield or {}).items()])
@@ -265,9 +261,9 @@ class CompactLayoutAgent(BaseAgent):
         legend_str = " | ".join([f"[{v}] {k}" for k, v in b_legend.items()])
 
         print("\n" * 2)
-        print(f"=== 🧱 SystemA 直连矩阵布局 [Tick {tick:03d}] ===")
-        print(f"终端产出: {yield_str}")
-        print(f"建筑图例: {legend_str}")
+        print("AutoBlueprint status message.")
+        print(f"Terminal output: {yield_str}")
+        print(f"Building legend: {legend_str}")
         print("=" * 64)
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}

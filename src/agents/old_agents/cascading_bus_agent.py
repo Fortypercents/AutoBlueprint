@@ -7,21 +7,19 @@ from agents.base_agent import BaseAgent
 
 
 class CascadingBusAgent(BaseAgent):
-    """
-    层级化瀑布流总线智能体 (Tier-Based Cascading Bus Agent)
-    """
+    'Agent status message.'
 
     def __init__(self, target_outputs, ext_in=(0, 2), ext_out=(33, 22)):
         super().__init__(target_outputs)
         self.ext_in = ext_in
         self.ext_out = ext_out
 
-        # 默认使用体系A的物流组件
+        # Implementation note.
         self.belt_id = 102
         self.router_id = 110
 
     def _sort_buildings_by_dependency(self):
-        """按层级 (Tier) 批量结算依赖关系，防止同级机器串联"""
+        'AutoBlueprint status message.'
         tiers = []
         pending = list(self.required_buildings)
         available_mats = set(self.raw_material_inputs.keys())
@@ -30,7 +28,7 @@ class CascadingBusAgent(BaseAgent):
             tier_buildings = [b for b in pending if all(mat in available_mats for mat in b.input_materials)]
 
             if not tier_buildings:
-                print("⚠️ 警告：检测到配方死锁或缺失前置原料！")
+                print('Warning: planning issue detected.')
                 tiers.append(pending)
                 break
 
@@ -46,15 +44,15 @@ class CascadingBusAgent(BaseAgent):
         return tiers
 
     def optimize(self, env: GridMap):
-        print("\n【Agent 思考中】开始解析多级生产链路拓扑关系...")
+        print('Agent status message.')
         self.calculate_production_chain()
 
         tiers = self._sort_buildings_by_dependency()
 
         for i, tier in enumerate(tiers):
-            print(f" -> 层级 (Tier {i}): " + " | ".join([b.name for b in tier]))
+            print(f"Layout status for building: {b.name}")
 
-        # === 开始层级化瀑布流铺设 ===
+        # Implementation note.
         current_bus_y = self.ext_in[1]
         last_out_x, last_out_y = self.ext_in
         current_x = self.ext_in[0] + 3
@@ -63,13 +61,13 @@ class CascadingBusAgent(BaseAgent):
             placed_b_info = []
             max_h = 0
 
-            # 1. 并排摆放该层级的所有机器
+            # Implementation note.
             for b in tier:
                 bx = current_x
                 by = current_bus_y + 2
 
                 if not env.place_building(b, bx, by):
-                    print(f"❌ 警告：无法在 ({bx}, {by}) 放置 {b.name}，地图空间可能不足！")
+                    print(f"Layout status for building: {b.name}")
                     continue
 
                 bw, bh = b.size
@@ -86,7 +84,7 @@ class CascadingBusAgent(BaseAgent):
             last_px = placed_b_info[-1][1]
             splitter_xs = [p_info[1] for p_info in placed_b_info]
 
-            # --- 2. 铺设该层的【输入横向总线】及分配器 (修复物理拓扑顺序) ---
+            # Input/output port handling.
             if last_out_y < current_bus_y:
                 for y in range(last_out_y + 1, current_bus_y):
                     if env._get_cell(last_out_x, y) is None:
@@ -99,11 +97,11 @@ class CascadingBusAgent(BaseAgent):
                     b_info = next(info for info in placed_b_info if info[1] == x)
                     b, px, by, bw, bh = b_info
 
-                    # 放置分配器
+                    # Building placement logic.
                     splitter = get_transport_instance(self.router_id)
                     env.place_transport(splitter, px, current_bus_y, Direction.RIGHT)
 
-                    # 顺流放置进入机器的支线
+                    # Building placement logic.
                     for y in range(current_bus_y + 1, by):
                         belt = get_transport_instance(self.belt_id)
                         env.place_transport(belt, px, y, Direction.DOWN)
@@ -112,7 +110,7 @@ class CascadingBusAgent(BaseAgent):
                         belt = get_transport_instance(self.belt_id)
                         env.place_transport(belt, x, current_bus_y, Direction.RIGHT)
 
-            # --- 3. 铺设该层的【输出横向总线】及汇流器 (修复物理拓扑顺序) ---
+            # Input/output port handling.
             out_bus_y = current_bus_y + 2 + max_h + 1
 
             for x in range(first_px, last_px + 1):
@@ -120,12 +118,12 @@ class CascadingBusAgent(BaseAgent):
                     b_info = next(info for info in placed_b_info if info[1] == x)
                     b, px, by, bw, bh = b_info
 
-                    # 从机器出来的支线 (上游)
+                    # Implementation note.
                     for y in range(by + bh, out_bus_y):
                         belt = get_transport_instance(self.belt_id)
                         env.place_transport(belt, px, y, Direction.DOWN)
 
-                    # 汇流器
+                    # Implementation note.
                     merger = get_transport_instance(self.router_id)
                     env.place_transport(merger, px, out_bus_y, Direction.RIGHT)
                 else:
@@ -133,17 +131,17 @@ class CascadingBusAgent(BaseAgent):
                         belt = get_transport_instance(self.belt_id)
                         env.place_transport(belt, x, out_bus_y, Direction.RIGHT)
 
-            # 4. 在当前层输出总线的最末端，放置一个向下的皮带
+            # Building placement logic.
             final_out_x = last_px + 1
             belt = get_transport_instance(self.belt_id)
             env.place_transport(belt, final_out_x, out_bus_y, Direction.DOWN)
 
-            # 更新游标
+            # Implementation note.
             last_out_x = final_out_x
             last_out_y = out_bus_y
             current_bus_y = out_bus_y + 2
 
-        # === 终点连接 ===
+        # Implementation note.
         out_x, out_y = self.ext_out
         for y in range(last_out_y + 1, out_y):
             belt = get_transport_instance(self.belt_id)
@@ -157,9 +155,7 @@ class CascadingBusAgent(BaseAgent):
             env.place_transport(belt, x, out_y, Direction.RIGHT)
 
     def render_blueprint(self, env: GridMap, tick: int = 0, current_yield: Dict = None):
-        """
-        修改后的渲染函数：增加了横纵坐标显示。
-        """
+        'AutoBlueprint status message.'
         yield_str = ", ".join([f"[{getattr(m, 'name', str(m))}]: {v}" for m, v in (current_yield or {}).items()])
 
         b_legend = {}
@@ -172,16 +168,16 @@ class CascadingBusAgent(BaseAgent):
         legend_str = " | ".join([f"[{v}] {k}" for k, v in b_legend.items()])
 
         print("\n" * 3)
-        print(f"=== 🏭 层级瀑布流水线自动打样 [Tick {tick:03d}] ===")
-        print(f"终端收集: {yield_str}")
-        print(f"建筑图例: {legend_str}")
+        print("AutoBlueprint status message.")
+        print(f"Terminal output: {yield_str}")
+        print(f"Building legend: {legend_str}")
         print("-" * (env.width * 3 + 5))
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
 
-        # 逐行打印，包含纵坐标
+        # Implementation note.
         for y in range(env.height):
-            row_str = f"{y:02d} |"  # 打印纵坐标
+            row_str = f"{y:02d} |"  # Implementation note.
             for x in range(env.width):
                 cell = env._get_cell(x, y)
                 if cell is None:
@@ -206,10 +202,10 @@ class CascadingBusAgent(BaseAgent):
                     row_str += "[?]"
             print(row_str)
 
-        # 打印横坐标底线和刻度
+        # Implementation note.
         print("   " + "-" * (env.width * 3 + 2))
         header_x = "    "
         for x in range(env.width):
-            header_x += f"{x:02d} " if x % 2 == 0 else "   "  # 每隔两个显示一次，防止重叠
+            header_x += f"{x:02d} " if x % 2 == 0 else "   "  # Implementation note.
         print(header_x)
         print("=========================================================================")

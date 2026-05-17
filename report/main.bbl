@@ -1,0 +1,81 @@
+\begin{thebibliography}{10}
+
+\bibitem{ahuja1993network}
+Ravindra~K. Ahuja, Thomas~L. Magnanti, and James~B. Orlin.
+\newblock {\em Network Flows: Theory, Algorithms, and Applications}.
+\newblock Prentice Hall, 1993.
+
+\bibitem{endfieldwiki}
+{Arknights Terra Wiki contributors}.
+\newblock Arknights: Endfield.
+\newblock \url{https://arknights.wiki.gg/wiki/Arknights:_Endfield}, 2026.
+\newblock Accessed 13 May 2026.
+
+\bibitem{chang2000bstar}
+Yun-Chih Chang, Yao-Wen Chang, Guang-Ming Wu, and Shu-Wei Wu.
+\newblock B*-trees: A new representation for non-slicing floorplans.
+\newblock In {\em Proceedings of the 37th Design Automation Conference}, pages
+  458--463, 2000.
+
+\bibitem{drira2007facility}
+Amine Drira, Henri Pierreval, and Sonia Hajri-Gabouj.
+\newblock Facility layout problems: A survey.
+\newblock {\em Annual Reviews in Control}, 31(2):255--267, 2007.
+
+\bibitem{eades1984heuristic}
+Peter Eades.
+\newblock A heuristic for graph drawing.
+\newblock {\em Congressus Numerantium}, 42:149--160, 1984.
+
+\bibitem{goldberg1989genetic}
+David~E. Goldberg.
+\newblock {\em Genetic Algorithms in Search, Optimization and Machine
+  Learning}.
+\newblock Addison-Wesley, 1989.
+
+\bibitem{hart1968astar}
+Peter~E. Hart, Nils~J. Nilsson, and Bertram Raphael.
+\newblock A formal basis for the heuristic determination of minimum cost paths.
+\newblock {\em IEEE Transactions on Systems Science and Cybernetics},
+  4(2):100--107, 1968.
+
+\bibitem{kirkpatrick1983annealing}
+Scott Kirkpatrick, C.~Daniel Gelatt, and Mario~P. Vecchi.
+\newblock Optimization by simulated annealing.
+\newblock {\em Science}, 220(4598):671--680, 1983.
+
+\bibitem{mindustrywiki}
+{Mindustry Wiki contributors}.
+\newblock Mindustry wiki.
+\newblock \url{https://mindustry.fandom.com/wiki/Mindustry_Wiki}, 2026.
+\newblock Accessed 13 May 2026.
+
+\bibitem{murata1996rectangle}
+Hiroshi Murata, Kunihiro Fujiyoshi, Shigetoshi Nakatake, and Yoji Kajitani.
+\newblock Rectangle-packing-based module placement.
+\newblock {\em Proceedings of the IEEE International Conference on
+  Computer-Aided Design}, pages 472--479, 1995.
+
+\bibitem{russell2021ai}
+Stuart Russell and Peter Norvig.
+\newblock {\em Artificial Intelligence: A Modern Approach}.
+\newblock Pearson, 4 edition, 2021.
+
+\bibitem{sutton2018reinforcement}
+Richard~S. Sutton and Andrew~G. Barto.
+\newblock {\em Reinforcement Learning: An Introduction}.
+\newblock MIT Press, 2 edition, 2018.
+
+\bibitem{endfieldwikipedia}
+{Wikipedia contributors}.
+\newblock Arknights: Endfield.
+\newblock \url{https://en.wikipedia.org/wiki/Arknights:_Endfield}, 2026.
+\newblock Accessed 13 May 2026.
+
+\bibitem{mindustrywikipedia}
+{Wikipedia contributors}.
+\newblock Mindustry.
+\newblock \url{https://en.wikipedia.org/wiki/Mindustry}, 2026.
+\newblock Accessed 13 May 2026.
+
+\end{thebibliography}

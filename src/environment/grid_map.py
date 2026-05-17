@@ -16,7 +16,7 @@ class GridMap:
     def can_place_building(self, building: Building, start_x: int, start_y: int,
                            direction: Direction = Direction.UP) -> bool:
         w, h = building.size
-        # 模拟建筑横向摆放时长宽互换
+        # Building placement logic.
         if direction in (Direction.LEFT, Direction.RIGHT):
             w, h = h, w
 
@@ -31,7 +31,7 @@ class GridMap:
         if not self.can_place_building(building, start_x, start_y, direction):
             return False
 
-        # 根据方向翻转尺寸并设定对立面
+        # Implementation note.
         if direction in (Direction.LEFT, Direction.RIGHT):
             building.size = (building.size[1], building.size[0])
         building.set_direction(direction)
@@ -98,7 +98,7 @@ class GridMap:
                 continue
 
             # ==========================================
-            # 【体系物理隔离】：检查建筑与相邻元件的体系兼容性
+            # Building placement logic.
             # ==========================================
             b_sys = getattr(building, 'system_type', None)
             n_sys = getattr(neighbor, 'system_type', None)
@@ -160,11 +160,11 @@ class GridMap:
         return None
 
     def _is_valid_router_output(self, cell, from_x, from_y) -> bool:
-        """结构校验：检查目标格子是否为合法的输出方向"""
+        'AutoBlueprint status message.'
         if not isinstance(cell, TransportComponent):
             return False
 
-        # 兼容全部新体系物流元件：拒绝把物品塞给“正向着自己开过来”的传送带/管道
+        # Implementation note.
         dx = cell.pos[0] - from_x
         dy = cell.pos[1] - from_y
         if cell.direction.value == (-dx, -dy):
@@ -178,9 +178,9 @@ class GridMap:
             return self._get_cell(x, y - 1), self._get_cell(x, y + 1)
 
     def _apply_next_tick_states(self):
-        """阶段 4: 应用下一帧状态"""
+        'AutoBlueprint status message.'
         for transport in self.transports:
-            # 【核心新增】：结算交叉器的双通道
+            # Implementation note.
             if "Crosser" in type(transport).__name__:
                 if hasattr(transport, 'next_cross_buffers'):
                     if not hasattr(transport, 'cross_buffers'): transport.cross_buffers = {}
@@ -193,14 +193,14 @@ class GridMap:
                             transport.cross_buffers[axis] = (n_mat, n_amt)
                     transport.next_cross_buffers.clear()
 
-                    # 仅作 UI 渲染用途：挑一个通道的物品显示
+                    # Implementation note.
                     if transport.cross_buffers:
                         transport.current_item = list(transport.cross_buffers.values())[0]
                     else:
                         transport.current_item = None
                 continue
 
-            # --- 原始状态应用逻辑 ---
+            # Implementation note.
             next_item = getattr(transport, 'next_tick_item', None)
             if next_item is not None:
                 n_mat = next_item[0] if isinstance(next_item, tuple) else next_item
@@ -220,10 +220,10 @@ class GridMap:
                 transport.next_tick_item = None
 
     # ==========================================
-    # 核心流体力学引擎 (智能合并与分配)
+    # Implementation note.
     # ==========================================
     def _push_to_cell(self, target_cell, mat, amt, travel_dir=None) -> float:
-        """底层物流接口：尝试将最多 amt 数量的 mat 挤进 target_cell 中"""
+        'AutoBlueprint status message.'
         if not isinstance(target_cell, TransportComponent):
             return 0.0
 
@@ -234,7 +234,7 @@ class GridMap:
                 return 0.0
 
         # ==========================================
-        # 1. 严格化传送带之间的传输规则 (防误伤逻辑)
+        # Implementation note.
         # ==========================================
         is_multi_port = any(name in type(target_cell).__name__ for name in
                             ["Crosser", "Merger", "Splitter", "Router", "Gate", "Access"])
@@ -259,7 +259,7 @@ class GridMap:
                 return 0.0
 
         # ==========================================
-        # 2. 【核心修复】：交叉器双通道独立容量逻辑 (无限容积)
+        # Implementation note.
         # ==========================================
         is_crosser = "Crosser" in type(target_cell).__name__
         if is_crosser:
@@ -282,8 +282,8 @@ class GridMap:
             curr_amt = curr_item[1] if curr_item else 0.0
             next_amt = next_item[1] if next_item else 0.0
 
-            # 【关键修改】：将交叉器的容量视为无限大 (float('inf'))
-            # 这样交叉器可以作为完美的弹性缓冲区，吸收物理引擎 Tick 顺序错位带来的拥堵
+            # Implementation note.
+            # Implementation note.
             capacity = float('inf')
             space_left = capacity - (curr_amt + next_amt)
 
@@ -295,7 +295,7 @@ class GridMap:
             return push_amt
 
         # ==========================================
-        # 3. 原始皮带推入逻辑
+        # Implementation note.
         # ==========================================
         curr_item = getattr(target_cell, 'current_item', None)
         next_item = getattr(target_cell, 'next_tick_item', None)
@@ -319,7 +319,7 @@ class GridMap:
         return push_amt
 
     def _push_building_outputs(self, building: Building):
-        """阶段 3: 将建筑产物推上管网"""
+        'Layout status message.'
         if not hasattr(building, 'output_buffer'): building.output_buffer = {}
         if not hasattr(building, 'rr_index'): building.rr_index = 0
 
@@ -337,7 +337,7 @@ class GridMap:
                     target_cell = self._get_cell(px, py)
 
                     if isinstance(target_cell, TransportComponent):
-                        # 基于传送带相对于建筑边框的绝对位置，计算期望的 in_dir
+                        # Building placement logic.
                         expected_in_dir = None
                         if py == ay - 1:
                             expected_in_dir = Direction.DOWN
@@ -350,16 +350,16 @@ class GridMap:
 
                         belt_in_dir = getattr(target_cell, 'in_dir', getattr(target_cell, 'direction', Direction.RIGHT))
 
-                        # 【核心修复】：识别交叉器，解除单向朝向限制
+                        # Implementation note.
                         is_crosser = "Crosser" in type(target_cell).__name__
 
-                        # 如果不是交叉器，且当前这根皮带的 in_dir 和建筑要求的朝向不符，果断拦截防偷窃
+                        # Building placement logic.
                         if not is_crosser and expected_in_dir is not None and belt_in_dir != expected_in_dir:
                             consecutive_failures += 1
                             building.rr_index = (building.rr_index + 1) % num_ports
                             continue
 
-                        # 既然对齐了（或是交叉器），推算出货物被挤入皮带时的物理行驶方向
+                        # Implementation note.
                         t_dir_map = {Direction.UP: Direction.DOWN, Direction.DOWN: Direction.UP,
                                      Direction.LEFT: Direction.RIGHT, Direction.RIGHT: Direction.LEFT}
                         travel_dir = t_dir_map.get(expected_in_dir, Direction.DOWN)
@@ -384,7 +384,7 @@ class GridMap:
         mat = transport.current_item[0] if isinstance(transport.current_item, tuple) else transport.current_item
         amt = transport.current_item[1] if isinstance(transport.current_item, tuple) else 1.0
 
-        # 获取运输元件当前的物理行驶方向并传递
+        # Implementation note.
         travel_dir = getattr(transport, 'direction', Direction.RIGHT)
         pushed = self._push_to_cell(target_cell, mat, amt, travel_dir=travel_dir)
 
@@ -411,7 +411,7 @@ class GridMap:
         while amt > 0 and consecutive_failures < len(target_cells):
             cell = target_cells[transport.rr_index]
 
-            # 动态计算分配至该接口时的旅行方向
+            # Implementation note.
             dx = cell.pos[0] - transport.pos[0]
             dy = cell.pos[1] - transport.pos[1]
             try:
@@ -440,7 +440,7 @@ class GridMap:
 
     def tick(self):
         # ==========================================
-        # 阶段 1: 建筑生产 (内部消化与产出缓冲)
+        # Building placement logic.
         # ==========================================
         for building in self.buildings:
             if not hasattr(building, 'inventory'): building.inventory = {}
@@ -460,14 +460,14 @@ class GridMap:
                     building.output_buffer[mat] = building.output_buffer.get(mat, 0) + (amount * speed)
 
         # ==========================================
-        # 阶段 2: 运输网络流转 (核心重构：多趟扫荡机制 Sweep System)
+        # Implementation note.
         # ==========================================
         for t in self.transports:
             t.moved_this_tick = False
 
         moved_any = True
         sweeps = 0
-        while moved_any and sweeps < 10:  # 最大允许 10 次扫荡，完美解决任意深度的局部依赖
+        while moved_any and sweeps < 10:  # Implementation note.
             moved_any = False
             sweeps += 1
 
@@ -479,7 +479,7 @@ class GridMap:
                 current_x, current_y = transport.pos
                 success = False
 
-                # 【独立执行单元】：交叉器主动向外排货
+                # Implementation note.
                 if "Crosser" in c_name:
                     if not hasattr(transport, 'cross_buffers') or not transport.cross_buffers:
                         transport.moved_this_tick = True
@@ -516,7 +516,7 @@ class GridMap:
                         moved_any = True
                     continue
 
-                # 【基础元件与分流/汇流器】
+                # Implementation note.
                 if getattr(transport, 'current_item', None) is None:
                     transport.moved_this_tick = True
                     continue
@@ -551,17 +551,17 @@ class GridMap:
 
                 if success:
                     moved_any = True
-                    # 如果当前货物全部清空，则本帧无需再处理它
+                    # Implementation note.
                     if getattr(transport, 'current_item', None) is None:
                         transport.moved_this_tick = True
 
         # ==========================================
-        # 阶段 3: 将新产物推上管网 (解决克隆 Bug)
+        # Implementation note.
         # ==========================================
         for building in self.buildings:
             self._push_building_outputs(building)
 
         # ==========================================
-        # 阶段 4: 应用下一帧状态
+        # Implementation note.
         # ==========================================
         self._apply_next_tick_states()

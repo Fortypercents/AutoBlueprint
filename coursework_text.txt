@@ -1,0 +1,458 @@
+School of Computer Science
+University of Nottingham
+COMP3004/4105 Designing Intelligent Agents
+Spring 2025/26
+Colin Johnson and Jeremie Clos
+
+Information
+Component weight:
+Expected workload:
+Release date:
+Submission date:
+Marks / Feedback release date:
+Submission method:
+Late submission policy:
+Feedback session date:
+
+100%
+90-100 hours
+3rd of March 2026
+14th of May 2026
+5th of June 2026
+Moodle submission
+UoN default 5% per working day
+June 2026
+
+Overview
+The coursework for this module is based around (1) designing intelligent autonomous agents
+and an environment with which they interact, (2) setting those agents a task, (3) asking one
+or more questions about that task, and (4) evaluating it using experimental methods. You will
+then present the results from this in a report, video or podcast, which will also explain the
+context for the work; and, submit the code and other supplementary materials. Students
+doing COMP4105 will in addition do a short presentation explaining how their coursework
+relates to contemporary research and technology.
+
+Requirements & Specifications
+An autonomous intelligent agent is a program that operates in a particular environment,
+perceives aspects of that environment, and then uses its intelligence to choose actions that
+change that environment, to carry out some task. Typically, these actions are a mixture of
+responses (either immediate or deliberated) to its perception and memory, and proactive
+actions such as exploration.
+Your task for this coursework is to design an agent-based system containing the following
+four aspects:
+An Environment. This is the (virtual) place where the agents will operate. It could be one of:
+•
+
+•
+•
+•
+•
+
+A simulation of a physical environment in which mobile robotic agents move. This
+could be the simulation used in the classes earlier in the semester (perhaps
+extended), a robot environment such as The Player Project
+(http://playerstage.sourceforge.net), or a project in Unity or a similar game
+environment if you are familiar with one from elsewhere.
+A language environment, for example where humans are interacting using written or
+spoken language with one or more intelligent agents,
+The Bristol Stock Exchange system
+(https://github.com/davecliff/BristolStockExchange) or a similar simulation of some
+aspect of the economy or society
+A game environment such as Ms. PacMan (https://gym.openai.com/envs/MsPacmanv0/), the Open Racing Car Simulator (http://torcs.sourceforge.net), RoboCup
+(https://www.robocup.org/leagues/23) or similar (see e.g. http://www.gvgai.net)
+One of the more complex task environments from the OpenAI Gym
+(https://gym.openai.com)
+
+There is no need to develop the environment yourself—the focus of the project will be on the
+agents in the environment (robots, trading agents, game-playing agents, autonomous
+drivers, language agents, etc.) – but it is likely that you will set up the details of the
+1
+
+environment to address your specific question. You are allowed to use the code from the
+classes, but please try to make it clear which parts of the code are taken from the class
+examples, and which is your own work (we appreciate that this is sometimes complicated to
+do at a line-by-line level, but you should indicate this in terms of which functions/classes etc
+are taken without modification and which are modified and to what extent).
+Autonomous Agents. You should introduce one or more autonomous intelligent agents into
+the environment, which use some kind of AI to solve a task.
+•
+
+•
+
+Examples of AI could be an AI planning system such as Goal Oriented Action
+Planning (http://alumni.media.mit.edu/~jorkin/goap.html), a search algorithm such as
+A* search, a genetic or swarm search, a reinforcement learning algorithm, fuzzy
+logic, or a hard-coded reactive or state-machine AI.
+The task will be one relevant to the environment: e.g. a robot vacuum cleaner
+clearing up dirt, a poet trying to write verse about the day’s news, a trader trying to
+optimise its returns, a game player trying to get a high score in a game, etc.
+
+Within reason, you can use any language to do this. If you are planning to use anything
+other than Python, Java, C/C++, MATLAB/Octave, R, JavaScript, and mainstream web
+technologies such as HTML/CSS/JS, then please mention this in your topic approval.
+A Question. You should ask a specific question (or a set of related questions) about your
+system. For example:
+•
+•
+•
+•
+•
+•
+•
+
+How do different approaches (e.g. a genetic algorithm, an A* search algorithm, a
+hard-coded heuristic, different kinds of reinforcement learning algorithms) compare in
+terms of task performance?
+How does the performance of the system change as we vary the number of agents in
+it?
+If the system is trained on one version of the environment, does that learning transfer
+over to a new version of the environment?
+How do different kinds of communication/coordination between agents affect the
+efficiency of those agents on the task?
+How much improvement does storing some information (e.g. a map of the
+environment) make compared to carrying out the task in a purely reactive way?
+How do different kinds of sensing/perception systems affect the capacity of the agent
+to carry out its task?
+How sensitive is the agent to error/noise?
+
+A Set of Experiments. You should answer your question by carrying out a set of
+experiments. Remember the structure that we talked about in the lecture on 17th February:
+1. Implement code that carries out a run of the agent’s behaviour and measures
+performance
+2. Then, run that code multiple times to get a measure of average performance
+3. Then, repeat that process for the different conditions in your question, and use
+descriptive statistics, charts/visualisation, and/or inferential statistics (e.g.
+significance tests) to test your question
+Then, you should discuss the question using these experimental results as your evidence.
+If this evaluation involves asking people to interact with your code, then please read the
+notes on research ethics that are in the Coursework section of the module Moodle page.
+
+2
+
+Constraints. Your project is expected to demonstrate 90-100 hours of effort. So, you should
+not just run a basic reinforcement learning or convolutional neural networks library/tutorial on
+a simple environment from AI Gym or similar, though you can use these as part of your
+work.
+You are not allowed to develop a basic chatbot i.e. a single system that interacts with a
+human using intent matching, identity management, transaction processing, question
+answering etc. If you want to do something on language agents, you should do something
+that goes beyond this (e.g. a creative language system, a system that involves interactions
+between multiple language agents, or a system that involves a language-based interface to
+another system). If you have doubts about this, please mention it in the topic approval.
+
+Getting Started
+You are at liberty to use any readily available libraries, frameworks, APIs, services, datasets
+etc. as you want—but your work must demonstrate substantial work in using, combining and
+building on what you use. You are not permitted to simply re-submit coursework from
+another module, but you could potentially build on code that you have written previously and
+build on it in a new way. If your work extends or re-uses coursework from other modules, it
+must make a substantial and distinctive contribution beyond what was in those courseworks,
+and you must clearly identify what the new contribution is.
+The key to getting a good grade on this module is to do a piece of work that is balanced
+between all parts of the coursework—you should justify why the topic is important and
+perhaps explore why it is a good model problem for AI/autonomy, provide clear context in
+research in the area, explain and justify the design of the agents and environment, have
+clear questions, make sure that the experiments that you do are focused on the questions,
+present the results clearly using statistical and/or visual methods, and make sure that you
+reflect on the questions using the evidence from the experiments, and finally put the work
+into the wider context of AI, agents and autonomous systems.
+
+Recommendations
+Here are a few examples of things that you could do. You don’t have to do one of these—
+indeed, we would prefer you to come up with your own idea—but, these would all be
+acceptable project ideas if you want to do them:
+•
+•
+•
+•
+•
+
+To take the “robot vacuum cleaner” from the early classes, and experiment with
+different numbers of robots, and different coordination strategies (e.g. robots try to
+stay a fixed distance from each other, compared to sharing a map that they build up)
+Explore how multiple language agents, each of which has a particular set of
+knowledge or perspective can, discuss/argue with each other to explore a topic.
+Take a number of different trading strategies and run them in the Bristol Stock
+Exchange system with varying amounts of noise/uncertainty, to see how robust each
+strategy is.
+Develop a game-playing agent or a control agent for an NPC or opponent in a game,
+and explore different strategies for playing (or learning to play) a game.
+Take the “avoid the cats” problem from the class, and compare a number of
+strategies for the problem: warning the cats vs. moving out of the way, and learning
+when to act based on a simple statistical approach vs. a decision-tree approach.
+
+3
+
+•
+
+•
+
+Consider the problem of planning a robot’s movement around a mapped environment
+(e.g. the map generated from WiFi triangulation introduced in one of the classes).
+Contrast A* search and genetic algorithms on this problem, and compare them both
+against random wandering.
+Explore a swarm simulation such as the Boids flocking algorithm explored in one of
+the classes, and map out how the overall behaviour of the birds relates to the
+parameters in the algorithm.
+
+Submission Instructions
+The module is assessed entirely by coursework—there is no exam.
+
+Topic Approval: You should submit a short description of your project idea (a couple of
+paragraphs, 100-200 words) on the Moodle page by 15:00 on 13th March 2026. We will then
+give you feedback on whether the project is an acceptable one, and how it might be modified
+or improved if it is not acceptable. If you submit before this date, we will endeavour to give
+you early feedback.
+Portfolio Submission: By 3pm on 14th May 2026 you should submit the following via
+Moodle. This deadline may be extended if you have if you have an extension approved via
+an Extenuating Circumstances request or a CERF request relating to a support plan. Late
+submissions will incur a penalty of 5% per working day, in line with the standard University
+late policy.
+Your submission should contain:
+1. A report, of up to 4000 words (not including references/headings), or a 20-minute video, or
+a 20-minute audio podcast, where you describe:
+•
+•
+•
+•
+•
+•
+•
+•
+
+The core ideas of your project; clearly state the question that you are trying to answer
+A review of relevant ideas, technologies and research papers
+How you designed the environment and agents in order to address that question
+Technologies used, and challenges that you met in doing the implementation
+How you set up and ran your experiments
+The results from your experiments
+A discussion of the question in light of the experimental results
+A conclusion, where you summarise the work, reflect on its successes and
+limitations, and briefly mention some ideas for how you would take the work forward
+if you had more time
+The target audience of this is students in your year on your degree—so, there is no need to
+explain basic computer science ideas, but you should not assume a deep knowledge of your
+particular topic.
+2. A copy of your code, either as an upload or a link to a repository
+3. Anything else that you think would be helpful for the markers, e.g. sample outputs from
+your system, a link to a brief video demonstrating it working, reports from user
+studies/interviews etc.
+For students on COMP3004, the mark for this portfolio of work will count as 100% of the
+module mark.
+Presentation: In addition to the portfolio of work described for COMP3004, students on
+COMP4105 should also do a 10-minute presentation about your work (dates/times will be
+arranged; this is likely to be between 15th-16th May 2026 or the following week). This should
+give an overview of your project and explain how it is informed by research ideas from AI
+and intelligent agents.
+4
+
+For students on COMP4105, the portfolio of work (including the report/video/podcast) will
+count for 90% of the marks on the module and the presentation for 10%.
+
+Assessment Criteria
+Learning Outcomes
+This assessment tests the following learning outcomes:
+•
+•
+•
+•
+•
+
+To describe the problems and techniques in the design of intelligent agents, explain
+common agent architectures.
+To evaluate agent requirements and specifications. To analyse agent behaviour in a
+variety of environments.
+To demonstrate advanced Al programming skills.
+To analyse and design complex multi-component systems.
+To present work in a professional manner using appropriate technical concepts and
+vocabulary (including both written and, for COMP4105 only, spoken presentation).
+
+Marking Guide
+Marking will take into account:
+•
+•
+•
+
+The intrinsic complexity of the overall project
+Background research and how you have used it to contextualise your work
+The choice of task environment and how you have used it/adapted it for your specific
+project
+• The effective use of artificial intelligence and agent-based systems ideas from the
+course and your wider studies in designing your autonomous agents
+• How clear your question(s) are, how well the experiments have been designed to
+answer them, and your level of rigour in planning and analysing the experiments
+• How well the report answers the question by using the evidence from the
+experiments
+• The overall clarity and structure of the report, appropriate use of scientific and
+technical English, and the quality of charts, diagrams, pseudocode where relevant
+• The quality of reflection on the successes and limitations of the work
+• (For students doing a presentation) the structure of the presentation, the clarity of
+explanations, and good use of slides or other visual aids
+There is a detailed marking scheme at the end of the document.
+
+Getting help
+If you have any questions please ask us by email (Colin.Johnson@nottingham.ac.uk,
+Jeremie.Clos@nottingham.ac.uk) or come along to the class sessions. The Tuesday
+classes after the Spring break will be dedicated solely to coursework support.
+
+Academic Integrity
+This assessment should consist of your own individual work. You should make any direct
+quotations clear both by using quotation marks and by providing a clear reference to the
+paper immediately after the quotation. If you are building on someone else’s code (e.g. our
+code from the classes, open-source projects, etc.), please make it clear which aspects of the
+code are your work through the use of comments. The University has detailed advice about
+academic integrity, and submissions that demonstrate a lack of that integrity will be treated
+under appropriate disciplinary procedures.
+5
+
+AI Statement
+Use of AI tools in preparing the portfolio of work is acceptable, but you should clearly state in
+your report or in a document in your portfolio what you have used. Remember that you need
+to demonstrate your learning on the module, and so your submission should represent
+around 90-100 hours of your human effort over and above anything that is done by an AI
+system. When preparing your report/podcast/video/presentation you should use AI system
+only for minor grammatical corrections.
+You must be confident of your understanding of everything in your submission and we
+reserve the right to check up on this through an interview if we consider that the submission
+does not show sufficient evidence of understanding.
+
+Marking Scheme—Main Project
+Each of the following descriptors gives a broad idea of the achievement expected for a mark
+in that range. Clearly, individual projects may fall short in some areas and show excellence
+in others. The marking will be adjusted to reflect the intrinsic difficulty of the project.
+Band
+
+Guidelines
+
+90-100
+
+Marks in this range are reserved for a superb all-round performance. Work done in
+all aspects of the work go beyond even high expectations. The student has shown
+a thorough understanding of the problem. All tasks, including very challenging
+aspects and extensive stretch goals, have been successfully completed. The
+project shows depth and engagement with research ideas, and everything has
+been completed to a high standard. The report could form the basis of a
+publishable conference/workshop paper.
+
+80-89
+
+Excellent contributions to all areas of the project. Exceeded expectations in some
+areas by carrying out implementations and experiments of a high level of
+complexity or sophistication. Demonstrates knowledge and understanding of the
+ideas that goes beyond the material covered in the module. Clear appreciation of
+the project as a whole, its adequacies, limitations and possibilities for future
+development. The project demonstrates insight and depth beyond that usually
+expected in undergraduate/master’s work. Report presented very clearly and to a
+good professional standard.
+
+70-79
+
+Very good contributions to all areas of the project. Successful completion of the project
+tasks including some more challenging aspects and stretch goals. Demonstrated initiative
+and creative problem-solving ability. Able to undertake the work in a competent and
+independent manner. Able to reflect accurately on adequacy and limitations of the project’s
+achievements. Report presented very clearly and to a good professional standard.
+Good appreciation of background. A good attempt at applying this to the task, with
+demonstrated ability to cope with difficulties. Good technical skills in several areas. Whilst
+most of the core aims of the project have been achieved, it might come a little short in
+some areas. Good reflective understanding of the project. Well organised and structured
+report, with perhaps a few parts unclear.
+Postgraduate pass level. Satisfactory background reading and a competent attempt at
+their tasks. Reasonable technical competence demonstrated. The core parts of the agents,
+environment and experiments have been completed satisfactorily, but little achieved
+beyond that. Able to reflect satisfactorily on the project. Or, a lower-difficulty project carried
+out well. Decently written and structured report, but with perhaps some aspects unclear,
+unbalanced or underdeveloped.
+Undergraduate pass level. Competent background reading and appreciation of the
+project area. Basic technological competence. Some areas of the core tasks may be
+
+60-69
+
+50-59
+
+40-49
+
+6
+
+30-39
+
+20-29
+
+incomplete, but a decent attempt has been made at them. Able to reflect in a limited way
+on the project. Report gives an overview of the project and is readable, but perhaps lacks
+detail, clarity or focus in some areas and/or is too informal or unbalanced.
+Unsatisfactory. Some attempt has been made at the background reading but clearly only
+partial understanding of project topic. Incomplete attempt at the core tasks. Weak technical
+competence. Little ability to reflect adequately on the project. Report fails to cover some
+aspects of the work.
+Inadequate background reading, but shows some limited understanding of how ideas can
+be linked to the task. Minimal attempt at the core tasks, showing poor understanding. A
+substantial amount of work is still needed to achieve the core tasks. Minimal reflection on
+the project. Report is disorganised, overly-short and contains areas that are very unclear
+and/or demonstrates misunderstandings.
+
+10-19
+
+Minimal attempt at background reading, inappropriate use of material, almost no
+attempt at core tasks. Very poor understanding of the problem. Minimal or no
+reflection on the project. Minimal report, or report shows substantial
+misunderstandings.
+
+0-9
+
+No or almost no significant attempt.
+
+Marking Scheme—Presentation (COMP4105 only)
+Each of the following descriptors gives a broad idea of the achievement expected for a mark
+in that range. Clearly, individual projects may fall short in some areas and show excellence
+in others. The marking will adjusted to reflect the intrinsic difficulty of the project.
+Band
+
+Guidelines
+
+9-10
+
+A professional-level presentation of exceptional clarity and very clear structure,
+with very high-quality slides or other visual aids that flow seamlessly with the
+spoken presentation. Shows a thorough and up-to-date understanding of research
+and technologies in the area and how they relate to the work.
+
+7-8
+
+A clearly structured presentation, which explains all aspects of the project well, and
+which has high-quality slides or other visual aids that are tied in strongly with the
+spoken presentation. Well-grounded in an understanding of research and
+technology in the area, including contemporary developments.
+
+5-6
+
+Postgraduate pass level. A competent presentation that has a decent structure,
+gives a competent description of most aspects of the project, and where the slides
+and other visual aids are largely clear and related to the spoken presentation.
+Shows some awareness of how the project connects to research and technology in
+the area.
+
+3-4
+
+A presentation that has some level of organisation but where the topics are not
+presented in a clear order or where the presentation jumps from topic-to-topic,
+some explanations not clear, visual aids provided but not very clear and/or not very
+related to the spoken presentation. Shows lack of awareness of the wider
+research/technology context.
+
+1-2
+
+A presentation that mentions some aspects of the project work but is largely
+disorganised to the point where it cannot be followed and where most explanations
+are unclear, and where visual aids are unclear and/or not related to the spoken
+presentation. Minimal attempts to connect the work to research/technology.
+
+0
+
+No significant attempt at presentation
+
+7
+
+8
+
+

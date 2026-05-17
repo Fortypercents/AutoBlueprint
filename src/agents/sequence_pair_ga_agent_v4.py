@@ -4,13 +4,14 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Set, Tuple
 
 from agents.sequence_pair_sa_agent_v3 import SequencePairSaAgentV3
+from agents.sequence_pair_sa_agent_v2 import CellVariant, ProductionCell
 from entities.material import MaterialType
 from entities.registry import get_building_instance
 from entities.transport import Direction
 from environment.grid_map import GridMap
 
 
-class SequencePairSaAgentV4(SequencePairSaAgentV3):
+class SequencePairGaAgentV4(SequencePairSaAgentV3):
     """
     V4 adds three search upgrades:
     - detailed beam/K-shortest routing with full rip-up reroute rounds;
@@ -210,6 +211,150 @@ class SequencePairSaAgentV4(SequencePairSaAgentV3):
         anchors = [0, 1, 2, 4, 8, 12, 16, 24, 32, 48, 64, 80, count - 1]
         anchors.extend(int((count - 1) * ratio) for ratio in (0.35, 0.50, 0.65, 0.80, 0.90))
         return sorted({idx for idx in anchors if 0 <= idx < count})
+
+    def _build_production_cells(self, env: GridMap):
+        incoming, outgoing = self._graph_adjacency()
+        depths = self._node_depths()
+        sinks = [
+            nid for nid, building in self.nodes.items()
+            if any(mat in self.target_outputs_dict for mat in building.output_materials)
+        ] or [nid for nid in self.nodes if not outgoing[nid]]
+
+        sink_groups = self._merge_parallel_sinks(sinks)
+        used = set()
+        cells = []
+        for cell_id, group_sinks in enumerate(sink_groups):
+            lanes = []
+            side_groups = []
+            for sink in group_sinks:
+                sink_sides = []
+                for src in sorted(incoming.get(sink, []), key=lambda nid: (-depths.get(nid, 0), nid)):
+                    chain = self._primary_chain(src, incoming, used, depths)
+                    if len(chain) > 1:
+                        lanes.append(chain)
+                    elif chain and self._is_one_to_one_supplier(chain[0], sink, outgoing):
+                        sink_sides.extend(chain)
+                    elif chain:
+                        lanes.append(chain)
+                    used.update(chain)
+                side_groups.append(sink_sides)
+                used.add(sink)
+
+            node_ids = sorted(set(group_sinks) | {n for lane in lanes for n in lane} | {n for side in side_groups for n in side})
+            cells.append(ProductionCell(cell_id, group_sinks, lanes, side_groups, node_ids, max(depths.get(n, 0) for n in node_ids)))
+
+        leftovers = [nid for nid in sorted(self.nodes) if nid not in used]
+        for nid in leftovers:
+            cell_id = len(cells)
+            cells.append(ProductionCell(cell_id, [nid], [], [[]], [nid], depths.get(nid, 0)))
+
+        self.cells = cells
+        self.cell_by_id = {cell.cell_id: cell for cell in cells}
+        self.cell_variants = {cell.cell_id: self._make_cell_variants(cell, env) for cell in cells}
+
+    def _is_one_to_one_supplier(self, src: int, dst: int, outgoing: Dict[int, List[int]]) -> bool:
+        return outgoing.get(src, []) == [dst]
+
+    def _make_cell_variants(self, cell: ProductionCell, env: GridMap) -> List[CellVariant]:
+        variants = list(super()._make_cell_variants(cell, env))
+        variants.extend(self._fan_in_cell_variants(cell))
+
+        unique = []
+        seen = set()
+        for variant in variants:
+            key = (
+                variant.width,
+                variant.height,
+                tuple(sorted((nid, x, y, direction.name) for nid, (x, y, direction) in variant.offsets.items())),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(variant)
+        return unique[:128]
+
+    def _fan_in_cell_variants(self, cell: ProductionCell) -> List[CellVariant]:
+        if not cell.sinks:
+            return []
+
+        variants = []
+        seen = set()
+        for lane_gap in (1, 2, 3):
+            for row_gap in (1, 2):
+                for sink_gap in (1, 2, 3):
+                    local = self._place_fan_in_cell(cell, lane_gap, row_gap, sink_gap)
+                    if set(local) != set(cell.node_ids):
+                        continue
+                    local = self._normalize_local_state(local)
+                    _, _, max_x, max_y, _, _ = self._bounding_metrics(local)
+                    key = (max_x, max_y, tuple(sorted((nid, s['x'], s['y']) for nid, s in local.items())))
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    variants.append(CellVariant(max_x, max_y, {
+                        nid: (s['x'], s['y'], s['dir']) for nid, s in local.items()
+                    }))
+        return variants
+
+    def _place_fan_in_cell(self, cell: ProductionCell, lane_gap: int, row_gap: int, sink_gap: int) -> Dict:
+        incoming, _outgoing = self._graph_adjacency()
+        lanes_by_sink = defaultdict(list)
+        for lane in cell.lanes:
+            lane_tail = lane[-1]
+            for sink in cell.sinks:
+                if lane_tail in incoming.get(sink, []):
+                    lanes_by_sink[sink].append(lane)
+                    break
+
+        state = {}
+        block_x = 0
+        for sink_idx, sink in enumerate(cell.sinks):
+            sink_w, sink_h = self.nodes[sink].size
+            chain_lanes = []
+            for lane in lanes_by_sink.get(sink, []):
+                chain_lanes.append(lane)
+            side_nodes = list(cell.side_groups[sink_idx] if sink_idx < len(cell.side_groups) else [])
+
+            lane_widths = [max(self.nodes[nid].size[0] for nid in lane) for lane in chain_lanes]
+            lane_heights = [
+                sum(self.nodes[nid].size[1] for nid in lane) + max(0, len(lane) - 1) * row_gap
+                for lane in chain_lanes
+            ]
+            lane_block_w = sum(lane_widths) + max(0, len(lane_widths) - 1) * lane_gap
+            lane_block_h = max(lane_heights, default=0)
+            side_w = max((self.nodes[nid].size[0] for nid in side_nodes), default=0)
+            side_h = sum(self.nodes[nid].size[1] for nid in side_nodes) + max(0, len(side_nodes) - 1) * row_gap
+            core_w = max(sink_w, lane_block_w)
+            block_w = core_w + (lane_gap + side_w if side_nodes else 0)
+            block_h = max(lane_block_h + sink_gap + sink_h, side_h)
+
+            core_x = block_x
+            sink_x = core_x + max(0, (core_w - sink_w) // 2)
+            sink_y = max(lane_block_h + sink_gap, block_h - sink_h)
+            state[sink] = {'x': sink_x, 'y': sink_y, 'dir': Direction.UP, 'size': self.nodes[sink].size}
+
+            lane_x = core_x + max(0, (core_w - lane_block_w) // 2)
+            for lane_w, lane_h, nodes in zip(lane_widths, lane_heights, chain_lanes):
+                y = lane_block_h - lane_h
+                for nid in nodes:
+                    w, h = self.nodes[nid].size
+                    state[nid] = {
+                        'x': lane_x + max(0, (lane_w - w) // 2),
+                        'y': y,
+                        'dir': Direction.UP,
+                        'size': self.nodes[nid].size,
+                    }
+                    y += h + row_gap
+                lane_x += lane_w + lane_gap
+
+            side_x = core_x + core_w + lane_gap
+            side_y = max(0, sink_y - side_h + sink_h)
+            for nid in side_nodes:
+                state[nid] = {'x': side_x, 'y': side_y, 'dir': Direction.UP, 'size': self.nodes[nid].size}
+                side_y += self.nodes[nid].size[1] + row_gap
+
+            block_x += block_w + max(2, lane_gap)
+        return state
 
     def _ga_layout_search(self, env: GridMap, fallback_state: Dict) -> Dict:
         if not self.cells:

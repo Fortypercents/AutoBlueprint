@@ -700,7 +700,18 @@ class SequencePairSaAgentV2(FdpSaAgentV2):
             defaultdict(list, {k: v[:] for k, v in self.generated_outputs.items()}),
             list(self.failed_routes),
             set(getattr(self, 'all_building_ports', set())),
+            [set(path) for path in getattr(self, 'external_io_paths', [])],
+            [set(path) for path in getattr(self, 'internal_route_paths', [])],
         )
 
     def _restore_routing_context(self, saved):
-        self.node_positions, self.used_ports, self.generated_inputs, self.generated_outputs, self.failed_routes, self.all_building_ports = saved
+        (
+            self.node_positions,
+            self.used_ports,
+            self.generated_inputs,
+            self.generated_outputs,
+            self.failed_routes,
+            self.all_building_ports,
+            self.external_io_paths,
+            self.internal_route_paths,
+        ) = saved

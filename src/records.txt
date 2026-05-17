@@ -1,0 +1,221 @@
+=== REPORT_RESULT_BEGIN ===
+Agent: Baseline
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 312
+Best Belt Length: 32
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=120
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,Baseline,low,16,312,32,1,1,BLUE_IRON_BOTTLE=120,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SA V2
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 440
+Best Belt Length: 132
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=120
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SA V2,low,16,440,132,1,1,BLUE_IRON_BOTTLE=120,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceSA V3
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 170
+Best Belt Length: 48
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=117
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceSA V3,low,16,170,48,1,1,BLUE_IRON_BOTTLE=117,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceGA V4
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 112
+Best Belt Length: 22
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=120
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceGA V4,low,16,112,22,1,1,BLUE_IRON_BOTTLE=120,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: Flow/CP V1
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 120
+Best Belt Length: 27
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=117
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,Flow/CP V1,low,16,120,27,1,1,BLUE_IRON_BOTTLE=117,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: FDP+SA V2
+Difficulty: low
+Seed: 16
+Target: BLUE_IRON_BOTTLE=2
+Best Area: 140
+Best Belt Length: 27
+Routing Success: 1
+Production Success: 1
+Final Yield: BLUE_IRON_BOTTLE=117
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,FDP+SA V2,low,16,140,27,1,1,BLUE_IRON_BOTTLE=117,0
+
+ 
+=== REPORT_RESULT_BEGIN ===
+Agent: Baseline
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 621
+Best Belt Length: 104
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=80
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,Baseline,medium,16,621,104,1,1,MID_CAP_BATTERY=80,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SA V2
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 285
+Best Belt Length: 49
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=40
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SA V2,medium,16,285,49,1,1,MID_CAP_BATTERY=40,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceSA V3
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 165
+Best Belt Length: 46
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=80
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceSA V3,medium,16,165,46,1,1,MID_CAP_BATTERY=80,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceGA V4
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 165
+Best Belt Length: 45
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=80
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceGA V4,medium,16,165,45,1,1,MID_CAP_BATTERY=80,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: Flow/CP V1
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 208
+Best Belt Length: 66
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=80
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,Flow/CP V1,medium,16,208,66,1,1,MID_CAP_BATTERY=80,0
+
+
+=== REPORT_RESULT_BEGIN ===
+Agent: FDP+SA V2
+Difficulty: medium
+Seed: 16
+Target: MID_CAP_BATTERY=1
+Best Area: 272
+Best Belt Length: 66
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=73
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,FDP+SA V2,medium,16,272,66,1,1,MID_CAP_BATTERY=73,0
+
+ 
+=== REPORT_RESULT_BEGIN ===
+Agent: Flow/CP V1
+Difficulty: high
+Seed: 16
+Target: MID_CAP_BATTERY=3
+Best Area: 1269
+Best Belt Length: 310
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=342
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,Flow/CP V1,high,16,1269,310,1,1,MID_CAP_BATTERY=342,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceSA V3
+Difficulty: high
+Seed: 16
+Target: MID_CAP_BATTERY=3
+Best Area: 816
+Best Belt Length: 241
+Routing Success: 1
+Production Success: 1
+Final Yield: MID_CAP_BATTERY=345
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceSA V3,high,16,816,241,1,1,MID_CAP_BATTERY=345,0
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceGA V4
+Difficulty: high
+Seed: 16
+Target: MID_CAP_BATTERY=3
+Best Area: 585
+Best Belt Length: 161
+
+=== REPORT_RESULT_BEGIN ===
+Agent: SequenceGA V4
+Difficulty: extreme
+Seed: 16
+Target: HIGH_CAP_BATTERY=1
+Best Area: 3069
+Best Belt Length: 539
+Routing Success: 1
+Production Success: 1
+Final Yield: HIGH_CAP_BATTERY=137
+Failed Routes: 0
+=== REPORT_RESULT_END ===
+REPORT_CSV,SequenceGA V4,extreme,16,3069,539,1,1,HIGH_CAP_BATTERY=137,0
+

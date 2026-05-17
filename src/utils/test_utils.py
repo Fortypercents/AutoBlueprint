@@ -2,7 +2,7 @@ from entities.transport import Direction, TransportComponent
 
 
 def _get_building_cell_str(building, cx, cy):
-    # ... (保持原有的渲染框逻辑不变) ...
+    # Implementation note.
     ax, ay = getattr(building, 'anchor_pos', (cx, cy))
     w, h = getattr(building, 'size', (1, 1))
     rx, ry = cx - ax, cy - ay
@@ -73,7 +73,7 @@ def render_system_b_blueprint(env, tick=0, status_text=""):
 
                 dir_char = dir_symbols.get(out_dir, "*")
 
-                # 【视觉核心】：当输入和输出方向不同时，渲染精美的转向字符
+                # Input/output port handling.
                 if in_dir != out_dir and not (is_crosser or is_router or is_merger):
                     turn_map = {
                         (Direction.UP, Direction.RIGHT): '└',

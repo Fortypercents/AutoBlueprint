@@ -15,12 +15,12 @@ from agents.base_agent import BaseAgent
 
 class BlueprintTestAgent(BaseAgent):
     def optimize(self, env: GridMap):
-        print("【Agent 开始构建主总线与汇流蓝图(体系A)】...")
+        print('Agent status message.')
         in_belt_y, machine_y, out_belt_y = 2, 4, 8
         start_x, spacing = 2, 4
         last_mid_x = start_x
 
-        # 102: SystemABelt (装甲传送带), 110: SystemALogicRouter (分配器)
+        # Implementation note.
         for x in range(start_x + 1):
             belt = get_transport_instance(102)
             env.place_transport(belt, x, in_belt_y, Direction.RIGHT)
@@ -58,7 +58,7 @@ class BlueprintTestAgent(BaseAgent):
 
     def render_blueprint(self, env: GridMap, tick: int = 0, total_yield: float = 0):
         print("\n" * 5)
-        print(f"=== 🗺️ 满载物流管线动态模拟 [Tick {tick:03d}] | 累计产出: {total_yield} 个 ===")
+        print(f"=== Logistics simulation [Tick {tick:03d}] | Total output: {total_yield} ===")
 
         dir_symbols = {Direction.RIGHT: ">", Direction.LEFT: "<", Direction.UP: "^", Direction.DOWN: "v"}
         grid_strs = []
@@ -72,7 +72,7 @@ class BlueprintTestAgent(BaseAgent):
                 elif hasattr(cell, 'size') and cell.size == (3, 3):
                     row_str += "[F]"
                 elif isinstance(cell, TransportComponent):
-                    # 增强识别：只要类名里包含 Router, Splitter, Merger 就渲染为 [S]
+                    # Implementation note.
                     c_name = type(cell).__name__
                     is_router = "Router" in c_name or "Splitter" in c_name or "Merger" in c_name
 
@@ -96,10 +96,10 @@ class BlueprintTestAgent(BaseAgent):
 
 
 # ==========================================
-# 稳态指纹提取函数
+# Implementation note.
 # ==========================================
 def get_factory_state(env: GridMap) -> Tuple[Any, ...]:
-    """提取当前工厂的完整物流状态，并做哈希化处理"""
+    'AutoBlueprint status message.'
     state = []
 
     for t in env.transports:
@@ -136,7 +136,7 @@ def run_test():
     agent.render_blueprint(env, 0, 0)
     time.sleep(1)
 
-    print("=== ⚙️ 开始动态物流流转模拟 ===")
+    print('AutoBlueprint status message.')
     total_iron_plate_yield = 0
     ticks_to_simulate = 100
 
@@ -148,7 +148,7 @@ def run_test():
     steady_yield_per_tick = 0.0
 
     for tick in range(1, ticks_to_simulate + 1):
-        # A. 左上角连续注入矿石 (体系A 熔炉需要铁矿石)
+        # Implementation note.
         in_cell = env._get_cell(0, 2)
         if isinstance(in_cell, TransportComponent):
             target_item = getattr(in_cell, 'current_item', None)
@@ -159,7 +159,7 @@ def run_test():
                 if mat == MaterialType.IRON_ORE and amt < 12.0:
                     in_cell.current_item = (MaterialType.IRON_ORE, min(12.0, amt + 12.0))
 
-        # B. 机器吃矿
+        # Implementation note.
         for b in env.buildings:
             if not hasattr(b, 'inventory'):
                 b.inventory = {}
@@ -185,10 +185,10 @@ def run_test():
                         else:
                             port_cell.current_item = None
 
-        # C. 物理引擎 Tick
+        # Implementation note.
         env.tick()
 
-        # D. 统计末端终点 (31, 10) 产量
+        # Implementation note.
         out_cell = env._get_cell(31, 10)
         out_item = getattr(out_cell, 'current_item', None)
         if out_item is not None:
@@ -201,7 +201,7 @@ def run_test():
                     total_iron_plate_yield += 1
             out_cell.current_item = None
 
-        # E. 稳态捕捉检测逻辑
+        # Implementation note.
         if steady_state_entry_tick == -1:
             current_state = get_factory_state(env)
 
@@ -214,23 +214,23 @@ def run_test():
                 state_history[current_state] = tick
                 yield_history[tick] = total_iron_plate_yield
 
-        # F. 打印本帧蓝图并暂停
+        # Implementation note.
         agent.render_blueprint(env, tick, total_iron_plate_yield)
         time.sleep(0.1)
 
-    # 动画结束，打印最终报告
-    print(f"\n✅ 动画演示结束！蓝图内实际共收集产物: {total_iron_plate_yield} 个")
-    print("================ 📊 工厂运行数据评估 ================")
+    # Implementation note.
+    print(f"Simulation finished. Total iron plate output: {total_iron_plate_yield}")
+    print('AutoBlueprint status message.')
     if steady_state_entry_tick != -1:
-        print(f" -> 🟢 进入稳定运行状态的 Tick: {steady_state_entry_tick}")
-        print(f" -> 🔄 稳态循环周期: {steady_state_period} Tick")
-        print(f" -> ⚡ 稳定运行下的平均产量: {steady_yield_per_tick:.2f} 个 / Tick")
+        print(f"Steady-state entry tick: {steady_state_entry_tick}")
+        print(f"Steady-state period: {steady_state_period} ticks")
+        print(f"Average steady-state yield: {steady_yield_per_tick:.2f} per tick")
         if steady_yield_per_tick >= target_outputs[MaterialType.IRON_PLATE]:
-            print(" -> 🏆 评价: 完美达标！蓝图无瓶颈。")
+            print('AutoBlueprint status message.')
         else:
-            print(" -> ⚠️  评价: 存在瓶颈，未能达到目标输入额度。")
+            print('AutoBlueprint status message.')
     else:
-        print(f" -> 🔴 在 {ticks_to_simulate} Tick 内，工厂未进入完美稳定状态。可能是因为传送带较长，需要增加模拟时长。")
+        print(f"Factory did not reach perfect steady state within {ticks_to_simulate} ticks.")
 
 
 if __name__ == "__main__":

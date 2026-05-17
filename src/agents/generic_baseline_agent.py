@@ -19,13 +19,16 @@ class GenericBaselineAgent:
         self.required_buildings = []
         self.node_positions = {}
 
-        # [新增] 区域块划分
+        # Implementation note.
         self.blocks: List[List[int]] = []
-        # [新增] 全局已占用端口记录，用于浮动引脚分配
+        # Input/output port handling.
         self.used_ports: Set[Tuple[int, int]] = set()
 
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
 
     def optimize(self, env: GridMap):
         print("\n[GenericBaselineAgent] Starting Wirelength-Driven Block-Level P&R...")
@@ -33,13 +36,13 @@ class GenericBaselineAgent:
         self._calculate_ratios_and_instances()
         self._build_instance_graph()
 
-        # 1. 以最高级建筑为核心，划分 Block
+        # Building placement logic.
         self._partition_blocks()
 
-        # 2. 按 Block 逐级底向上放置
+        # Building placement logic.
         self._layout_blocks(env)
 
-        # 3. 浮动引脚分配与最短距离连线
+        # Implementation note.
         self._route_connections(env)
 
     def _calculate_ratios_and_instances(self):
@@ -88,15 +91,15 @@ class GenericBaselineAgent:
                     self.edges.append({'src': src, 'dst': dst, 'mat': m})
 
     def _partition_blocks(self):
-        """【算法 1】：基于最高级节点辐射划分 Block"""
-        # 寻找终端建筑 (最高级)
+        'AutoBlueprint status message.'
+        # Building placement logic.
         root_nids = [nid for nid, b in self.nodes.items() if
                      any(mat in self.target_outputs_dict for mat in b.output_materials)]
 
         assigned_nodes = set()
         self.blocks = []
 
-        # 从最高级建筑开始 BFS，寻找为其服务的所有上游建筑
+        # Building placement logic.
         for root in root_nids:
             if root in assigned_nodes: continue
             current_block = []
@@ -107,18 +110,18 @@ class GenericBaselineAgent:
                 if curr not in assigned_nodes:
                     assigned_nodes.add(curr)
                     current_block.append(curr)
-                    # 寻找为当前建筑供货的提供者
+                    # Building placement logic.
                     providers = [e['src'] for e in self.edges if e['dst'] == curr]
                     queue.extend(providers)
 
             self.blocks.append(current_block)
 
-        # 兜底：处理可能的未连通孤岛
+        # Implementation note.
         leftovers = [n for n in self.nodes if n not in assigned_nodes]
         if leftovers: self.blocks.append(leftovers)
 
     def _layout_blocks(self, env: GridMap):
-        """【算法 2】：Block 独立规划，最低级优先 (Bottom-Up)"""
+        'AutoBlueprint status message.'
         start_x, start_y = 3, 5
         y_spacing = 7
         min_x_spacing = 3
@@ -126,7 +129,7 @@ class GenericBaselineAgent:
 
         current_block_x = start_x
 
-        # 计算全局深度 (0 为最低级的原材料加工厂)
+        # Implementation note.
         in_degrees = {nid: 0 for nid in self.nodes.keys()}
         for edge in self.edges: in_degrees[edge['dst']] += 1
         sources = [nid for nid, deg in in_degrees.items() if deg == 0]
@@ -143,7 +146,7 @@ class GenericBaselineAgent:
                         queue.append(nxt)
 
         for block_nodes in self.blocks:
-            # 将 Block 内的节点按深度分层
+            # Implementation note.
             tiers = defaultdict(list)
             for nid in block_nodes:
                 tiers[depths[nid]].append(nid)
@@ -152,7 +155,7 @@ class GenericBaselineAgent:
             current_y = start_y
             max_width_in_block = 0
 
-            # 从最低级 (Tier 0) 开始放置，逐级向上
+            # Building placement logic.
             for tier_level in range(max_depth + 1):
                 nodes_in_tier = tiers.get(tier_level, [])
                 tier_x = current_block_x
@@ -162,7 +165,7 @@ class GenericBaselineAgent:
                     building = self.nodes[nid]
                     w, h = building.size
 
-                    # 尝试根据上游建筑(如果有)对齐重心
+                    # Building placement logic.
                     parents = [e['src'] for e in self.edges if e['dst'] == nid and e['src'] in self.node_positions]
                     if parents:
                         avg_center_x = sum(
@@ -170,7 +173,7 @@ class GenericBaselineAgent:
                         ideal_x = avg_center_x - w // 2
                         tier_x = max(tier_x, ideal_x)
 
-                    # 换行保护
+                    # Implementation note.
                     if tier_x + w >= env.width:
                         tier_x = current_block_x
                         current_y += max_height_in_tier + y_spacing
@@ -185,11 +188,11 @@ class GenericBaselineAgent:
 
                 current_y += max_height_in_tier + y_spacing
 
-            # 下一个 Block 的起始 X 坐标
+            # Implementation note.
             current_block_x += max_width_in_block + block_spacing
 
     def _get_available_ports(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
-        """获取建筑尚未被占用的合法端口"""
+        'Layout status message.'
         ax, ay = self.node_positions[nid]
         w, h = self.nodes[nid].size
         y = ay - 1 if is_input else ay + h
@@ -200,11 +203,11 @@ class GenericBaselineAgent:
                 ports.append(port)
         return ports
 
-    def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]) -> \
+    def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]) ->\
     Optional[List[Tuple[int, int]]]:
-        """【算法 3】：多源多目标 A* 最短路径 (无附加扣分)"""
+        'Routing status message.'
 
-        # 启发函数：到任意目标的最短距离
+        # Implementation note.
         def heuristic(curr):
             return min(abs(curr[0] - g[0]) + abs(curr[1] - g[1]) for g in goals)
 
@@ -242,7 +245,7 @@ class GenericBaselineAgent:
                         if belt_in_dir is None:
                             belt_in_dir = Direction.LEFT if belt_out_dir == Direction.RIGHT else Direction.RIGHT if belt_out_dir == Direction.LEFT else Direction.DOWN if belt_out_dir == Direction.UP else Direction.UP
 
-                        # 仅允许跨越直行皮带
+                        # Implementation note.
                         is_straight = False
                         if belt_out_dir == Direction.RIGHT and belt_in_dir == Direction.LEFT:
                             is_straight = True
@@ -264,7 +267,7 @@ class GenericBaselineAgent:
                     if not is_crossable:
                         continue
 
-                        # 【目标变更】：纯粹的线长驱动，不添加任何惩罚。每走一格代价恒为 1。
+                        # Cost and penalty calculation.
                 new_cost = g_score[current] + 1
 
                 if (nx, ny) not in g_score or new_cost < g_score[(nx, ny)]:
@@ -284,9 +287,12 @@ class GenericBaselineAgent:
         return None
 
     def _route_connections(self, env: GridMap):
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
         routing_tasks = []
 
-        # 收集任务
+        # Implementation note.
         for edge in self.edges:
             routing_tasks.append(
                 {'src_type': 'node', 'src': edge['src'], 'dst_type': 'node', 'dst': edge['dst'], 'mat': edge['mat']})
@@ -302,42 +308,47 @@ class GenericBaselineAgent:
                         {'src_type': 'node', 'src': nid, 'dst_type': 'ext_out', 'dst': None, 'mat': mat})
 
         for t in routing_tasks:
-            # 【浮动引脚获取】：取目标建筑所有未被占用的合法端口交由 A* 抉择
+            # Routing logic.
             starts, goals = [], []
 
             if t['src_type'] == 'node':
                 starts = self._get_available_ports(t['src'], is_input=False)
             else:
-                # 外部输入：允许从地图顶部任何合理的 X 坐标下放
+                # Input/output port handling.
                 dst_x = self.node_positions[t['dst']][0]
                 starts = [(x, 0) for x in range(max(0, dst_x - 5), min(env.width, dst_x + 8))]
 
             if t['dst_type'] == 'node':
                 goals = self._get_available_ports(t['dst'], is_input=True)
             else:
-                # 外部输出：允许拉到地图底部合理的 X 坐标
+                # Input/output port handling.
                 src_x = self.node_positions[t['src']][0]
                 goals = [(x, env.height - 1) for x in range(max(0, src_x - 5), min(env.width, src_x + 8))]
 
             if not starts or not goals:
                 print(f"[Error] No available ports for task: {t}")
+                self.failed_routes.append(t)
                 continue
 
-            # 多源多目标寻路，算法自动取最短解
+            # Routing logic.
             path = self._a_star_route_multi(env, starts, goals)
 
             if path:
+                if t['src_type'] == 'ext_in' or t['dst_type'] == 'ext_out':
+                    self.external_io_paths.append(set(path))
+                else:
+                    self.internal_route_paths.append(set(path))
                 start_port = path[0]
                 end_port = path[-1]
 
-                # 标记被选中的实体端口为已占用 (外部全局端口不占用)
+                # Input/output port handling.
                 if t['src_type'] == 'node': self.used_ports.add(start_port)
                 if t['dst_type'] == 'node': self.used_ports.add(end_port)
 
                 if t['src_type'] == 'ext_in': self.generated_inputs[t['mat']].append(start_port)
                 if t['dst_type'] == 'ext_out': self.generated_outputs[t['mat']].append(end_port)
 
-                # 执行物理铺设
+                # Implementation note.
                 for i in range(len(path)):
                     px, py = path[i]
 
@@ -372,3 +383,4 @@ class GenericBaselineAgent:
                             env.place_transport(comp, px, py, Direction.DOWN)
             else:
                 print(f"[Warning] Congestion: Unable to route optimally for {t}")
+                self.failed_routes.append(t)

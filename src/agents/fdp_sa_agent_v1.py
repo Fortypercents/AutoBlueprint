@@ -12,12 +12,7 @@ from agents.utils import get_recipe_catalog
 
 
 class FdpSaAgent:
-    """
-    第二代/混合布局智能体 (极致稳定版):
-    1. 动态边界控制与全图跃迁避免死锁。
-    2. 加入 Legalization Fallback (合法化螺旋寻位)，保证 100% 建筑落盘，不缺件漏件！
-    3. M:N 动态多目标 A* 寻路，带绝对引脚保护与交叉直穿锁。
-    """
+    'Routing status message.'
 
     def __init__(self, target_outputs: Dict[MaterialType, float], available_inputs: List[MaterialType]):
         self.target_outputs_dict = target_outputs
@@ -30,58 +25,58 @@ class FdpSaAgent:
         self.used_ports: Set[Tuple[int, int]] = set()
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
 
-        self.padding = 3  # 留出 3 格防止拥堵
+        self.padding = 3  # Implementation note.
 
     def optimize(self, env: GridMap):
-        print("\n[SAAgentV2] 启动混合布局引擎...")
+        print('Layout status message.')
 
         self._calculate_ratios_and_instances()
         self._build_instance_graph()
 
-        print(f"[SAAgentV2] 执行全局拓扑初排...")
+        print("AutoBlueprint status message.")
         fdp_state = self._run_force_directed_placement(env)
 
-        print(f"[SAAgentV2] 执行 SA 模拟退火微调...")
+        print("AutoBlueprint status message.")
         best_state = self._run_simulated_annealing(env, fdp_state)
         self.node_positions = best_state
 
         # ==========================================
-        # 核心修复: 落地建筑时加入【合法化回退安全网】
+        # Building placement logic.
         # ==========================================
         for nid, state in self.node_positions.items():
             building = self.nodes[nid]
             placed = env.place_building(building, state['x'], state['y'], state['dir'])
 
             if not placed:
-                print(f"[Warning] 🚧 碰撞或越界！建筑 {building.name} 无法在 ({state['x']},{state['y']}) 放置，启动螺旋修正机制...")
+                print(f"Warning: could not place {building.name}; trying recovery.")
                 placed = self._legalize_placement(env, building, state['x'], state['y'], state['dir'], nid)
                 if not placed:
-                    print(f"[Error] 灾难性拥堵：无法在地图上为 {building.name} 找到任何容身之所！")
+                    print(f"Warning: could not place {building.name}; trying recovery.")
 
-        print(f"[SAAgentV2] 执行多源多目标 A* 自动布线...")
+        print("AutoBlueprint status message.")
         self._route_connections(env)
-        print(f"[SAAgentV2] 蓝图构建完毕！")
+        print("AutoBlueprint status message.")
 
     def _legalize_placement(self, env: GridMap, building, start_x, start_y, direction, nid) -> bool:
-        """
-        合法化回退 (Legalization): 以目标点为中心，一圈一圈向外螺旋搜索最近的空地。
-        彻底解决“缺漏件”的问题。
-        """
+        'AutoBlueprint status message.'
         max_radius = max(env.width, env.height)
         for r in range(1, max_radius):
-            # 遍历半径为 r 的正方形环
+            # Implementation note.
             for dx in range(-r, r + 1):
                 for dy in range(-r, r + 1):
                     if abs(dx) == r or abs(dy) == r:
                         nx, ny = start_x + dx, start_y + dy
                         if env.is_in_bounds(nx, ny):
-                            # 尝试在此处放下建筑
+                            # Building placement logic.
                             if env.place_building(building, nx, ny, direction):
-                                # 若成功，立刻同步覆盖 SA 的旧坐标，确保后面的 A* 能找到它！
+                                # Routing logic.
                                 self.node_positions[nid]['x'] = nx
                                 self.node_positions[nid]['y'] = ny
-                                print(f"  -> ✅ 已成功修正放置于安全坐标 ({nx}, {ny})")
+                                print("AutoBlueprint status message.")
                                 return True
         return False
 
@@ -89,34 +84,34 @@ class FdpSaAgent:
         new_s = {k: v.copy() for k, v in state.items()}
         nid = random.choice(list(new_s.keys()))
 
-        # 动态获取当前朝向下的宽高
+        # Implementation note.
         w, h = new_s[nid]['size']
         if new_s[nid]['dir'] in (Direction.LEFT, Direction.RIGHT):
             w, h = h, w
 
         r = random.random()
         if r < 0.4:
-            # 微调平移，严格遵守动态边界
+            # Implementation note.
             new_s[nid]['x'] = max(self.padding,
                                   min(env.width - w - self.padding, new_s[nid]['x'] + random.choice([-1, 1, -2, 2])))
             new_s[nid]['y'] = max(self.padding,
                                   min(env.height - h - self.padding, new_s[nid]['y'] + random.choice([-1, 1, -2, 2])))
         elif r < 0.6:
-            # 核心修复: 全图大跳跃 (Teleport)，防止建筑局部卡死重叠互相不让位
+            # Building placement logic.
             new_s[nid]['x'] = random.randint(self.padding, max(self.padding, env.width - w - self.padding))
             new_s[nid]['y'] = random.randint(self.padding, max(self.padding, env.height - h - self.padding))
         elif r < 0.85:
-            # 旋转
+            # Implementation note.
             new_s[nid]['dir'] = random.choice([d for d in Direction if d != new_s[nid]['dir']])
-            # 旋转后长宽翻转，必须强行把越界的拉回来
+            # Implementation note.
             w, h = new_s[nid]['size']
             if new_s[nid]['dir'] in (Direction.LEFT, Direction.RIGHT): w, h = h, w
             new_s[nid]['x'] = min(new_s[nid]['x'], max(self.padding, env.width - w - self.padding))
             new_s[nid]['y'] = min(new_s[nid]['y'], max(self.padding, env.height - h - self.padding))
         else:
-            # 互换位置
+            # Implementation note.
             nid2 = random.choice(list(new_s.keys()))
-            new_s[nid]['x'], new_s[nid]['y'], new_s[nid2]['x'], new_s[nid2]['y'] = new_s[nid2]['x'], new_s[nid2]['y'], \
+            new_s[nid]['x'], new_s[nid]['y'], new_s[nid2]['x'], new_s[nid2]['y'] = new_s[nid2]['x'], new_s[nid2]['y'],\
                                                                                    new_s[nid]['x'], new_s[nid]['y']
         return new_s
 
@@ -142,7 +137,7 @@ class FdpSaAgent:
 
                 if not (s1['x'] + w1 + self.padding <= s2['x'] or s2['x'] + w2 + self.padding <= s1['x'] or
                         s1['y'] + h1 + self.padding <= s2['y'] or s2['y'] + h2 + self.padding <= s1['y']):
-                    cost += 500000.0  # 核心修复：重叠代价从5w提升至50w，绝对优先避让
+                    cost += 500000.0  # Cost and penalty calculation.
 
         area = max(0, max_gx - min_gx) * max(0, max_gy - min_gy)
         cost += area * 15.0
@@ -177,7 +172,7 @@ class FdpSaAgent:
         return cost
 
     # ==========================================
-    # 以下代码继承上一版，无需变动（M:N 图论、引脚禁区、物理锁交叉等）
+    # Implementation note.
     # ==========================================
     def _build_instance_graph(self):
         self.nodes = {i: b for i, b in enumerate(self.required_buildings)}
@@ -280,6 +275,9 @@ class FdpSaAgent:
         return None
 
     def _route_connections(self, env: GridMap):
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
         self.all_building_ports = set()
         for nid in self.nodes:
             self.all_building_ports.update(self._get_all_ports_of_node(nid, True))
@@ -309,12 +307,18 @@ class FdpSaAgent:
             else:
                 goals = [(x, env.height - 1) for x in range(env.width)]
 
-            if not starts or not goals: continue
+            if not starts or not goals:
+                self.failed_routes.append(t)
+                continue
 
             forbidden_cells = self.all_building_ports - set(starts) - set(goals)
             path = self._a_star_route_multi(env, starts, goals, forbidden_cells)
 
             if path:
+                if t['src_type'] == 'ext_in' or t['dst_type'] == 'ext_out':
+                    self.external_io_paths.append(set(path))
+                else:
+                    self.internal_route_paths.append(set(path))
                 start_p, end_p = path[0], path[-1]
                 if t['src_type'] == 'node': self.used_ports.add(start_p)
                 if t['dst_type'] == 'node': self.used_ports.add(end_p)
@@ -358,7 +362,8 @@ class FdpSaAgent:
                             comp.in_dir = original_in
                             env.place_transport(comp, px, py, original_dir)
             else:
-                print(f"[Warning] 路径拥堵: 无法为 {t['mat'].name} 规划无损连线。")
+                print(f"Warning: could not route {t['mat'].name} without congestion.")
+                self.failed_routes.append(t)
 
     def _get_all_ports_of_node(self, nid: int, is_input: bool) -> List[Tuple[int, int]]:
         if nid not in self.node_positions: return []

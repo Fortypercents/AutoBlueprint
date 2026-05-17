@@ -1,0 +1,655 @@
+﻿src\agents\old_agents\cascading_bus_agent.py:11: 层级化瀑布流总线智能体 (Tier-Based Cascading Bus Agent)
+src\agents\old_agents\cascading_bus_agent.py:19: # 默认使用体系A的物流组件
+src\agents\old_agents\cascading_bus_agent.py:24: """按层级 (Tier) 批量结算依赖关系，防止同级机器串联"""
+src\agents\old_agents\cascading_bus_agent.py:33: print("⚠️ 警告：检测到配方死锁或缺失前置原料！")
+src\agents\old_agents\cascading_bus_agent.py:49: print("\n【Agent 思考中】开始解析多级生产链路拓扑关系...")
+src\agents\old_agents\cascading_bus_agent.py:55: print(f" -> 层级 (Tier {i}): " + " | ".join([b.name for b in tier]))
+src\agents\old_agents\cascading_bus_agent.py:57: # === 开始层级化瀑布流铺设 ===
+src\agents\old_agents\cascading_bus_agent.py:66: # 1. 并排摆放该层级的所有机器
+src\agents\old_agents\cascading_bus_agent.py:72: print(f"❌ 警告：无法在 ({bx}, {by}) 放置 {b.name}，地图空间可能不足！")
+src\agents\old_agents\cascading_bus_agent.py:89: # --- 2. 铺设该层的【输入横向总线】及分配器 (修复物理拓扑顺序) ---
+src\agents\old_agents\cascading_bus_agent.py:102: # 放置分配器
+src\agents\old_agents\cascading_bus_agent.py:106: # 顺流放置进入机器的支线
+src\agents\old_agents\cascading_bus_agent.py:115: # --- 3. 铺设该层的【输出横向总线】及汇流器 (修复物理拓扑顺序) ---
+src\agents\old_agents\cascading_bus_agent.py:123: # 从机器出来的支线 (上游)
+src\agents\old_agents\cascading_bus_agent.py:128: # 汇流器
+src\agents\old_agents\cascading_bus_agent.py:136: # 4. 在当前层输出总线的最末端，放置一个向下的皮带
+src\agents\old_agents\cascading_bus_agent.py:141: # 更新游标
+src\agents\old_agents\cascading_bus_agent.py:146: # === 终点连接 ===
+src\agents\old_agents\cascading_bus_agent.py:161: 修改后的渲染函数：增加了横纵坐标显示。
+src\agents\old_agents\cascading_bus_agent.py:175: print(f"=== 🏭 层级瀑布流水线自动打样 [Tick {tick:03d}] ===")
+src\agents\old_agents\cascading_bus_agent.py:176: print(f"终端收集: {yield_str}")
+src\agents\old_agents\cascading_bus_agent.py:177: print(f"建筑图例: {legend_str}")
+src\agents\old_agents\cascading_bus_agent.py:182: # 逐行打印，包含纵坐标
+src\agents\old_agents\cascading_bus_agent.py:184: row_str = f"{y:02d} |"  # 打印纵坐标
+src\agents\old_agents\cascading_bus_agent.py:209: # 打印横坐标底线和刻度
+src\agents\old_agents\cascading_bus_agent.py:213: header_x += f"{x:02d} " if x % 2 == 0 else "   "  # 每隔两个显示一次，防止重叠
+src\agents\old_agents\compact_layout_agent.py:13: SystemA 专属紧凑布局智能体 (Direct-Insertion Agent)
+src\agents\old_agents\compact_layout_agent.py:14: 充分利用 SystemA 的“全向接口”与“相邻建筑直接传输”特性，
+src\agents\old_agents\compact_layout_agent.py:15: 免除中间传送带，实现极限压缩的“机器矩阵”。
+src\agents\old_agents\compact_layout_agent.py:22: self.belt_id = 101  # 使用 SystemA 标准传送带
+src\agents\old_agents\compact_layout_agent.py:25: """拓扑排序，确保先放置上游机器"""
+src\agents\old_agents\compact_layout_agent.py:33: print("⚠️ 警告：检测到配方死锁或缺失前置原料！")
+src\agents\old_agents\compact_layout_agent.py:47: """数学校验：判断两个矩形边界是否刚好贴合 (共享一条边)"""
+src\agents\old_agents\compact_layout_agent.py:48: # 横向贴合 (左右相邻)，且纵向必须有重叠交集
+src\agents\old_agents\compact_layout_agent.py:52: # 纵向贴合 (上下相邻)，且横向必须有重叠交集
+src\agents\old_agents\compact_layout_agent.py:59: """在建筑周围寻找一个完全空的格子，用于接入或接出传送带"""
+src\agents\old_agents\compact_layout_agent.py:66: # A* 寻路 (仅用于外部物流，不再用于机器之间)
+src\agents\old_agents\compact_layout_agent.py:113: """根据 A* 路径铺设传送带，并自动修复拐角朝向"""
+src\agents\old_agents\compact_layout_agent.py:116: # 修复起点的传送带朝向
+src\agents\old_agents\compact_layout_agent.py:130: # 铺设沿途传送带
+src\agents\old_agents\compact_layout_agent.py:144: belt_dir = Direction.DOWN  # 终点默认朝向，稍后会被强制修正
+src\agents\old_agents\compact_layout_agent.py:151: print("\n【Agent 思考中】启用 SystemA 紧凑矩阵直连模式...")
+src\agents\old_agents\compact_layout_agent.py:155: # 字典记录：哪种物料是由【哪座建筑对象】产出的
+src\agents\old_agents\compact_layout_agent.py:171: print(f" -> 放置源头机器: {b.name}")
+src\agents\old_agents\compact_layout_agent.py:172: # 第一台机器：放在左上角附近，并从外部拉传送带接入
+src\agents\old_agents\compact_layout_agent.py:179: # 找一个空位接入传送带
+src\agents\old_agents\compact_layout_agent.py:185: # 强制让最后一格传送带指着机器
+src\agents\old_agents\compact_layout_agent.py:199: available_sources[out_mat] = b  # 注册建筑对象自身为资源源
+src\agents\old_agents\compact_layout_agent.py:203: print(f" -> 尝试紧贴上游机器直接插入: {b.name}")
+src\agents\old_agents\compact_layout_agent.py:204: # 后续机器：直接寻找上游机器的四周边界，吸附放置！
+src\agents\old_agents\compact_layout_agent.py:208: # 仅在上游建筑的扩展 1 圈范围内搜索 (极大地加快了运算速度)
+src\agents\old_agents\compact_layout_agent.py:212: # 判断坐标是否正好贴合上游机器
+src\agents\old_agents\compact_layout_agent.py:217: print(f"   ✅ [矩阵吸附成功] 无需传送带，紧贴放置在 ({x}, {y})")
+src\agents\old_agents\compact_layout_agent.py:223: print(f"   ❌ 严重警告：无法为 {b.name} 找到空间！")
+src\agents\old_agents\compact_layout_agent.py:226: # 终点输出连接
+src\agents\old_agents\compact_layout_agent.py:232: print(f" -> 从矩阵终端提取 {target_mat.name} 连接至出口 ...")
+src\agents\old_agents\compact_layout_agent.py:237: env.place_transport(belt, out_start[0], out_start[1], Direction.RIGHT)  # 初始方向，下面会修正
+src\agents\old_agents\compact_layout_agent.py:239: # 修正引出传送带的朝向(背对机器)
+src\agents\old_agents\compact_layout_agent.py:254: print("   ✅ 终端物流贯通！")
+src\agents\old_agents\compact_layout_agent.py:268: print(f"=== 🧱 SystemA 直连矩阵布局 [Tick {tick:03d}] ===")
+src\agents\old_agents\compact_layout_agent.py:269: print(f"终端产出: {yield_str}")
+src\agents\old_agents\compact_layout_agent.py:270: print(f"建筑图例: {legend_str}")
+src\agents\base_agent.py:1: # 代码已经不再使用，之后的所有agent不再调用base_agent，仅用于两个system的base_test
+src\agents\base_agent.py:14: 蓝图生成智能体的基类。
+src\agents\base_agent.py:15: 负责：
+src\agents\base_agent.py:16: 1. 根据目标产物反推所需的建筑数量与原料配比 (配比最优化)。
+src\agents\base_agent.py:17: 2. 提供评估蓝图好坏的适应度函数 (最小化占地面积和传送带消耗)。
+src\agents\base_agent.py:18: 3. 提供基础的自动寻路算法 (A*) 用于连接建筑之间的物流。
+src\agents\base_agent.py:23: :param target_outputs: 期望的最终产物及每Tick的产量要求。例如 {MaterialType.IRON_PLATE: 2.0}
+src\agents\base_agent.py:29: # 构建反向查找表：哪种产物由哪个建筑生产
+src\agents\base_agent.py:33: """内部方法：建立 产物 -> 建筑ID 的映射关系"""
+src\agents\base_agent.py:42: 核心功能 1：根据产物需求反推输入的原料配比，并实例化所需的最少建筑数量。
+src\agents\base_agent.py:43: 使用广度优先搜索 (BFS) 的思路向后反推生产链。
+src\agents\base_agent.py:53: # 如果没有建筑能生产该物质，说明它已经是处于最底层的基础原料 (如 IRON_ORE)
+src\agents\base_agent.py:57: # 查表得到生产该物质的建筑ID
+src\agents\base_agent.py:61: # 考虑建筑的基础生产倍率
+src\agents\base_agent.py:65: # 计算需要几个这样的建筑 (向上取整)
+src\agents\base_agent.py:69: # 利用工厂方法获取深拷贝的独立实体
+src\agents\base_agent.py:73: # 将该建筑的输入原料需求加入队列，继续向上游反推
+src\agents\base_agent.py:75: # 实际需要的上游原料数量，需按要求的比例精确折算
+src\agents\base_agent.py:79: print("\n【Agent 生产配比规划完成】")
+src\agents\base_agent.py:80: print(f" -> 目标产出: {self.target_outputs}")
+src\agents\base_agent.py:81: print(f" -> 最优原料输入需求: {self.raw_material_inputs}")
+src\agents\base_agent.py:82: print(f" -> 共需放置 {len(self.required_buildings)} 个建筑设施。\n")
+src\agents\base_agent.py:86: 核心功能 2：评估当前地图上的蓝图质量。
+src\agents\base_agent.py:87: 返回适应度分数 (Fitness)，分数越低越好。
+src\agents\base_agent.py:88: 优化目标：最小化占地面积(Bounding Box) + 最小化传送带数量(鼓励直连)。
+src\agents\base_agent.py:96: # 扫描所有建筑以计算包围盒 (Bounding Box)
+src\agents\base_agent.py:105: # 蓝图整体占地面积
+src\agents\base_agent.py:108: # 统计地图上的传送带等物流组件数量
+src\agents\base_agent.py:111: # 分数计算公式：占地面积 + (传送带数量 * 惩罚系数)
+src\agents\base_agent.py:112: # 如果 Agent 聪明地将两个建筑贴在一起触发 Direct Insertion，belt_count 就会减少，得分就会更好
+src\agents\base_agent.py:120: 核心功能 3：集成的 A* 寻路算法，用于在复杂环境中为两个端口自动连接传送带。
+src\agents\base_agent.py:138: # 上下左右四个方向
+src\agents\base_agent.py:142: # 1. 越界检测
+src\agents\base_agent.py:146: # 2. 碰撞检测：如果是实体(建筑或其他未连通的传送带)，则为障碍物
+src\agents\base_agent.py:147: # 允许目标点(goal)存在建筑，因为我们要把传送带对准它
+src\agents\base_agent.py:158: # 回溯并生成路径
+src\agents\base_agent.py:171: 执行具体的布局优化算法（随机搜索/模拟退火/遗传算法/强化学习）。
+src\agents\base_agent.py:172: 交由继承了 BaseAgent 的具体子类 (如 RLAgent, AnnealingAgent) 来实现具体的策略。
+src\agents\base_agent.py:174: raise NotImplementedError("智能体子类必须实现 optimize 方法以执行布局搜索和生成。")
+src\agents\fdp_sa_agent_v1.py:16: 第二代/混合布局智能体 (极致稳定版):
+src\agents\fdp_sa_agent_v1.py:17: 1. 动态边界控制与全图跃迁避免死锁。
+src\agents\fdp_sa_agent_v1.py:18: 2. 加入 Legalization Fallback (合法化螺旋寻位)，保证 100% 建筑落盘，不缺件漏件！
+src\agents\fdp_sa_agent_v1.py:19: 3. M:N 动态多目标 A* 寻路，带绝对引脚保护与交叉直穿锁。
+src\agents\fdp_sa_agent_v1.py:37: self.padding = 3  # 留出 3 格防止拥堵
+src\agents\fdp_sa_agent_v1.py:40: print("\n[SAAgentV2] 启动混合布局引擎...")
+src\agents\fdp_sa_agent_v1.py:45: print(f"[SAAgentV2] 执行全局拓扑初排...")
+src\agents\fdp_sa_agent_v1.py:48: print(f"[SAAgentV2] 执行 SA 模拟退火微调...")
+src\agents\fdp_sa_agent_v1.py:53: # 核心修复: 落地建筑时加入【合法化回退安全网】
+src\agents\fdp_sa_agent_v1.py:60: print(f"[Warning] 🚧 碰撞或越界！建筑 {building.name} 无法在 ({state['x']},{state['y']}) 放置，启动螺旋修正机制...")
+src\agents\fdp_sa_agent_v1.py:63: print(f"[Error] 灾难性拥堵：无法在地图上为 {building.name} 找到任何容身之所！")
+src\agents\fdp_sa_agent_v1.py:65: print(f"[SAAgentV2] 执行多源多目标 A* 自动布线...")
+src\agents\fdp_sa_agent_v1.py:67: print(f"[SAAgentV2] 蓝图构建完毕！")
+src\agents\fdp_sa_agent_v1.py:71: 合法化回退 (Legalization): 以目标点为中心，一圈一圈向外螺旋搜索最近的空地。
+src\agents\fdp_sa_agent_v1.py:72: 彻底解决“缺漏件”的问题。
+src\agents\fdp_sa_agent_v1.py:76: # 遍历半径为 r 的正方形环
+src\agents\fdp_sa_agent_v1.py:82: # 尝试在此处放下建筑
+src\agents\fdp_sa_agent_v1.py:84: # 若成功，立刻同步覆盖 SA 的旧坐标，确保后面的 A* 能找到它！
+src\agents\fdp_sa_agent_v1.py:87: print(f"  -> ✅ 已成功修正放置于安全坐标 ({nx}, {ny})")
+src\agents\fdp_sa_agent_v1.py:95: # 动态获取当前朝向下的宽高
+src\agents\fdp_sa_agent_v1.py:102: # 微调平移，严格遵守动态边界
+src\agents\fdp_sa_agent_v1.py:108: # 核心修复: 全图大跳跃 (Teleport)，防止建筑局部卡死重叠互相不让位
+src\agents\fdp_sa_agent_v1.py:112: # 旋转
+src\agents\fdp_sa_agent_v1.py:114: # 旋转后长宽翻转，必须强行把越界的拉回来
+src\agents\fdp_sa_agent_v1.py:120: # 互换位置
+src\agents\fdp_sa_agent_v1.py:148: cost += 500000.0  # 核心修复：重叠代价从5w提升至50w，绝对优先避让
+src\agents\fdp_sa_agent_v1.py:183: # 以下代码继承上一版，无需变动（M:N 图论、引脚禁区、物理锁交叉等）
+src\agents\fdp_sa_agent_v1.py:373: print(f"[Warning] 路径拥堵: 无法为 {t['mat'].name} 规划无损连线。")
+src\agents\generic_baseline_agent.py:22: # [新增] 区域块划分
+src\agents\generic_baseline_agent.py:24: # [新增] 全局已占用端口记录，用于浮动引脚分配
+src\agents\generic_baseline_agent.py:39: # 1. 以最高级建筑为核心，划分 Block
+src\agents\generic_baseline_agent.py:42: # 2. 按 Block 逐级底向上放置
+src\agents\generic_baseline_agent.py:45: # 3. 浮动引脚分配与最短距离连线
+src\agents\generic_baseline_agent.py:94: """【算法 1】：基于最高级节点辐射划分 Block"""
+src\agents\generic_baseline_agent.py:95: # 寻找终端建筑 (最高级)
+src\agents\generic_baseline_agent.py:102: # 从最高级建筑开始 BFS，寻找为其服务的所有上游建筑
+src\agents\generic_baseline_agent.py:113: # 寻找为当前建筑供货的提供者
+src\agents\generic_baseline_agent.py:119: # 兜底：处理可能的未连通孤岛
+src\agents\generic_baseline_agent.py:124: """【算法 2】：Block 独立规划，最低级优先 (Bottom-Up)"""
+src\agents\generic_baseline_agent.py:132: # 计算全局深度 (0 为最低级的原材料加工厂)
+src\agents\generic_baseline_agent.py:149: # 将 Block 内的节点按深度分层
+src\agents\generic_baseline_agent.py:158: # 从最低级 (Tier 0) 开始放置，逐级向上
+src\agents\generic_baseline_agent.py:168: # 尝试根据上游建筑(如果有)对齐重心
+src\agents\generic_baseline_agent.py:176: # 换行保护
+src\agents\generic_baseline_agent.py:191: # 下一个 Block 的起始 X 坐标
+src\agents\generic_baseline_agent.py:195: """获取建筑尚未被占用的合法端口"""
+src\agents\generic_baseline_agent.py:208: """【算法 3】：多源多目标 A* 最短路径 (无附加扣分)"""
+src\agents\generic_baseline_agent.py:210: # 启发函数：到任意目标的最短距离
+src\agents\generic_baseline_agent.py:248: # 仅允许跨越直行皮带
+src\agents\generic_baseline_agent.py:270: # 【目标变更】：纯粹的线长驱动，不添加任何惩罚。每走一格代价恒为 1。
+src\agents\generic_baseline_agent.py:295: # 收集任务
+src\agents\generic_baseline_agent.py:311: # 【浮动引脚获取】：取目标建筑所有未被占用的合法端口交由 A* 抉择
+src\agents\generic_baseline_agent.py:317: # 外部输入：允许从地图顶部任何合理的 X 坐标下放
+src\agents\generic_baseline_agent.py:324: # 外部输出：允许拉到地图底部合理的 X 坐标
+src\agents\generic_baseline_agent.py:333: # 多源多目标寻路，算法自动取最短解
+src\agents\generic_baseline_agent.py:344: # 标记被选中的实体端口为已占用 (外部全局端口不占用)
+src\agents\generic_baseline_agent.py:351: # 执行物理铺设
+src\agents\sa_agent_v1.py:16: 结合了 generic_baseline 体系的模拟退火布局智能体。
+src\agents\sa_agent_v1.py:17: 使用退火算法进行全局 Block/Node 的坐标优化，随后使用多源多目标 A* 完成浮动引脚连线。
+src\agents\sa_agent_v1.py:35: # 模拟退火参数
+src\agents\sa_agent_v1.py:42: print("\n[SABaselineAgent] 开始执行基于模拟退火的全局布局优化...")
+src\agents\sa_agent_v1.py:44: # 1. 计算所需建筑与依赖图 (继承自 baseline)
+src\agents\sa_agent_v1.py:48: # 2. 模拟退火布局 (替代原有的 _partition_blocks 和 _layout_blocks)
+src\agents\sa_agent_v1.py:51: # 3. 将最优解写入地图与状态
+src\agents\sa_agent_v1.py:57: # 4. 浮动引脚分配与最短距离连线 (继承自 baseline)
+src\agents\sa_agent_v1.py:61: # 核心：模拟退火算法引擎
+src\agents\sa_agent_v1.py:64: # 生成初始状态：将所有节点随机撒在地图中央区域
+src\agents\sa_agent_v1.py:99: print(f"[SABaselineAgent] 退火完成！最优布局代价值: {best_cost:.2f}")
+src\agents\sa_agent_v1.py:108: # 1. 边界与面积计算
+src\agents\sa_agent_v1.py:114: # 越界惩罚
+src\agents\sa_agent_v1.py:121: # 2. AABB 重叠惩罚 (绝对不允许建筑重叠)
+src\agents\sa_agent_v1.py:130: # 增加 1 格的呼吸空间 (padding)，防止靠得太紧堵死端口
+src\agents\sa_agent_v1.py:134: # 3. 曼哈顿线长预估 (针对内部边)
+src\agents\sa_agent_v1.py:140: # 4. 外部端口线长预估 (y=0 和 y=height-1)
+src\agents\sa_agent_v1.py:144: # 原料需要从顶部下来，Y坐标越小越好
+src\agents\sa_agent_v1.py:148: # 产物需要送往底部，距离底部越近越好
+src\agents\sa_agent_v1.py:159: # 随机平移 1-3 格
+src\agents\sa_agent_v1.py:163: # 随机互换位置
+src\agents\sa_agent_v1.py:171: # 以下为完全沿用 generic_baseline 的网络与路由逻辑
+src\agents\sa_agent_v2.py:30: # SA 基础参数
+src\agents\sa_agent_v2.py:36: # 【新增】动态布线死锁记忆池
+src\agents\sa_agent_v2.py:40: print("\n[SABaselineAgent] Phase 1: 构建产能感知有向无环图 (DAG)...")
+src\agents\sa_agent_v2.py:43: # 【核心架构修改】：引入大反馈循环 (Global Feedback Loop)
+src\agents\sa_agent_v2.py:46: print(f"\n[SABaselineAgent] 启动全局拓扑优化 - 第 {attempt + 1}/{max_layout_retries} 轮迭代")
+src\agents\sa_agent_v2.py:48: # 清理环境，确保每次重试都是一张白纸
+src\agents\sa_agent_v2.py:51: print("[SABaselineAgent] Phase 2: 布线感知型模拟退火布局...")
+src\agents\sa_agent_v2.py:59: print("[SABaselineAgent] Phase 3: 严格受理约束的精准布线...")
+src\agents\sa_agent_v2.py:63: print("\n[SABaselineAgent] >>> 布线100%连通，蓝图生成成功！ <<<")
+src\agents\sa_agent_v2.py:66: print(f"\n[SABaselineAgent] 警告：本轮存在无法化解的物理死锁。触发反馈机制，降温重构...")
+src\agents\sa_agent_v2.py:67: # 降低初始温度，保留部分好的结构，但强制拆散导致死锁的区域
+src\agents\sa_agent_v2.py:70: print("\n[SABaselineAgent] 达到最大退火重试上限，输出尽力而为的部分连通蓝图。")
+src\agents\sa_agent_v2.py:73: """完全格式化当前地图，准备下一次退火放置"""
+src\agents\sa_agent_v2.py:88: # Phase 1: DAG 生成 (保持不变)
+src\agents\sa_agent_v2.py:141: # Phase 2: Routing-Aware SA (引入外部引脚保护与死锁惩罚)
+src\agents\sa_agent_v2.py:201: # 1格 Padding 防止挤死
+src\agents\sa_agent_v2.py:228: # 【核心修复1】：极大增强外部原料和产物的上下边缘引导权重 (从 2.0 提升到 40.0)
+src\agents\sa_agent_v2.py:229: # 强制系统将进货口和最终产出口推向物流安全区，防止被包裹
+src\agents\sa_agent_v2.py:237: # 【核心修复2】：融合上一轮失败的死锁惩罚记忆 (Dynamic Repulsion)
+src\agents\sa_agent_v2.py:238: # 如果某条线或某个输入输出节点在 Phase 3 死锁过，这里会施加极高惩罚强迫它们重组
+src\agents\sa_agent_v2.py:277: # Phase 3: 严格物理布线与全局失败反馈 (Global Failure Feedback)
+src\agents\sa_agent_v2.py:288: # 将 ID 格式化，以便被惩罚系统精准识别
+src\agents\sa_agent_v2.py:340: # 定向拆解：拆解最后铺的2条线，腾出空间
+src\agents\sa_agent_v2.py:350: # 【核心修复3】：布线结束判定。如果队列仍未清空，说明是结构性死锁
+src\agents\sa_agent_v2.py:352: # 记录失败任务到全局黑名单中，大幅增加惩罚权重，交由下一轮 Phase 2 化解
+src\agents\utils.py:6: 构建全局配比映射关系：提取注册表中所有建筑的输入、输出和生产速度。
+src\agents\utils.py:7: 返回格式: {building_id: {'in': {MaterialType: amount}, 'out': {MaterialType: amount}, 'speed': float}}
+src\entities\building.py:33: # 默认方向和出入面
+src\entities\building.py:42: """核心机制1：旋转建筑，自动设定对立面为输入输出口"""
+src\entities\building.py:46: # 假定旋转方向即为“输入口”的朝向，那么输出口必然在对面
+src\entities\material.py:18: # 1. 原料 (Raw Materials)
+src\entities\material.py:20: SAND = auto()  # 沙子
+src\entities\material.py:21: COPPER = auto()  # 铜
+src\entities\material.py:22: LEAD = auto()  # 铅
+src\entities\material.py:23: IRON = auto()  # 铁
+src\entities\material.py:24: THORIUM = auto()  # 钍
+src\entities\material.py:25: COAL = auto()  # 煤炭
+src\entities\material.py:26: OIL = auto()  # 石油 (液体)
+src\entities\material.py:27: WATER = auto()  # 水 (液体)
+src\entities\material.py:28: SPORE_POD = auto()  # 生物孢子
+src\entities\material.py:31: # 2. 一级产物 (Tier 1 Products)
+src\entities\material.py:33: GRAPHITE = auto()  # 石墨 (由煤炭压制)
+src\entities\material.py:34: SILICON = auto()  # 硅 (由沙子+煤炭烧结)
+src\entities\material.py:35: PHASE_FABRIC = auto()  # 相织布 (由钍+沙子合成的放射材料)
+src\entities\material.py:36: SULFIDE = auto()  # 硫化物
+src\entities\material.py:37: PLASTIC = auto()  # 塑料 (由石油+孢子/钛等合成)
+src\entities\material.py:38: CRYOFLUID = auto()  # 冷冻液 (液体，通常需要水+钛/混合物)
+src\entities\material.py:41: # 3. 二级产物 (Tier 2 Products)
+src\entities\material.py:43: EXPLOSIVES = auto()  # 爆炸物 (由硫化物/孢子等混合)
+src\entities\material.py:44: SUPER_ALLOY = auto()  # 超级合金 (由铜+铅+钛+硅等多种材料锻造)
+src\entities\material.py:48: # 1. 农业与生物链 (Agriculture)
+src\entities\material.py:50: APPLE_SEED = auto()  # 苹果种子
+src\entities\material.py:51: APPLE = auto()  # 苹果
+src\entities\material.py:52: SANDLEAF_SEED = auto()  # 砂叶种子
+src\entities\material.py:53: SANDLEAF = auto()  # 砂叶
+src\entities\material.py:56: # 2. 矿物生产链
+src\entities\material.py:58: # [矿物原料]
+src\entities\material.py:60: AMETHYST = auto()  # 紫晶
+src\entities\material.py:61: BLUE_IRON = auto()  # 蓝铁
+src\entities\material.py:63: # [一级产物]
+src\entities\material.py:64: ORIGINIUM_POWDER = auto()  # 源石粉
+src\entities\material.py:65: CRYSTAL_SHELL = auto()  # 晶体外壳
+src\entities\material.py:66: AMETHYST_FIBER = auto()  # 紫晶纤维
+src\entities\material.py:67: BLUE_IRON_INGOT = auto()  # 蓝铁块
+src\entities\material.py:69: # [二级产物]
+src\entities\material.py:70: CRYSTAL_SHELL_POWDER = auto()  # 晶体外壳粉末
+src\entities\material.py:71: AMETHYST_POWDER = auto()  # 紫晶粉
+src\entities\material.py:72: BLUE_IRON_POWDER = auto()  # 蓝铁粉
+src\entities\material.py:73: SANDLEAF_POWDER = auto()  # 砂叶粉末
+src\entities\material.py:74: DENSE_BLUE_IRON_POWDER = auto()  # 致密蓝铁粉末
+src\entities\material.py:75: DENSE_ORIGINIUM_POWDER = auto()  # 致密源石粉末
+src\entities\material.py:76: AMETHYST_PART = auto()  # 紫晶零件
+src\entities\material.py:77: BLUE_IRON_PART = auto()  # 蓝铁零件
+src\entities\material.py:78: STEEL_BLOCK = auto()  # 钢块
+src\entities\material.py:79: STEEL_PART = auto()  # 钢制零件
+src\entities\material.py:80: AMETHYST_BOTTLE = auto()  # 紫晶瓶
+src\entities\material.py:81: BLUE_IRON_BOTTLE = auto()  # 蓝铁瓶
+src\entities\material.py:83: # [三级产物]
+src\entities\material.py:84: LOW_CAP_BATTERY = auto()  # 低容谷地电池
+src\entities\material.py:85: MID_CAP_BATTERY = auto()  # 中容谷地电池
+src\entities\material.py:86: HIGH_CAP_BATTERY = auto()  # 高容谷地电池
+src\entities\registry.py:5: # 引入我们刚刚重写的所有 SystemA 和 SystemB 运输元件
+src\entities\registry.py:22: # 体系 A 建筑注册 (经典体系：全向输入输出，允许直连)
+src\entities\registry.py:24: furnace = SystemABuilding(component_id=201, size=(3, 3), name="石炉")
+src\entities\registry.py:33: press = SystemABuilding(component_id=202, size=(3, 3), name="压制机")
+src\entities\registry.py:44: # 体系 B 建筑注册 (严格体系：定向出入、禁止直连)
+src\entities\registry.py:46: planter = SystemBBuilding(component_id=401, size=(4, 4), name="种植机")
+src\entities\registry.py:55: seed_extractor = SystemBBuilding(component_id=402, size=(4, 4), name="采种机")
+src\entities\registry.py:64: # ---------------- 1. 精炼炉 (3x3) ----------------
+src\entities\registry.py:65: # 源石 -> 晶体外壳
+src\entities\registry.py:66: refinery_ori = SystemBBuilding(component_id=511, size=(3, 3), name="精炼炉(源石)")
+src\entities\registry.py:74: # 紫晶 -> 紫晶纤维
+src\entities\registry.py:75: refinery_ame = SystemBBuilding(component_id=512, size=(3, 3), name="精炼炉(紫晶)")
+src\entities\registry.py:83: # 蓝铁 -> 蓝铁块
+src\entities\registry.py:84: refinery_iron = SystemBBuilding(component_id=513, size=(3, 3), name="精炼炉(蓝铁)")
+src\entities\registry.py:92: # ---------------- 2. 粉碎机 (3x3) ----------------
+src\entities\registry.py:93: # 晶体外壳 -> 外壳粉末
+src\entities\registry.py:94: crusher_shell = SystemBBuilding(component_id=521, size=(3, 3), name="粉碎机(外壳)")
+src\entities\registry.py:102: # 紫晶纤维 -> 紫晶粉
+src\entities\registry.py:103: crusher_ame = SystemBBuilding(component_id=522, size=(3, 3), name="粉碎机(紫晶)")
+src\entities\registry.py:111: # 蓝铁块 -> 蓝铁粉
+src\entities\registry.py:112: crusher_iron = SystemBBuilding(component_id=523, size=(3, 3), name="粉碎机(蓝铁)")
+src\entities\registry.py:120: # 源石 -> 源石粉 (直通配方)
+src\entities\registry.py:121: crusher_ori = SystemBBuilding(component_id=524, size=(3, 3), name="粉碎机(源石)")
+src\entities\registry.py:129: # ---------------- 3. 配件机 (3x3) ----------------
+src\entities\registry.py:130: # 紫晶纤维 -> 紫晶零件
+src\entities\registry.py:131: part_ame = SystemBBuilding(component_id=531, size=(3, 3), name="配件机(紫晶)")
+src\entities\registry.py:139: # 蓝铁块 -> 蓝铁零件
+src\entities\registry.py:140: part_iron = SystemBBuilding(component_id=532, size=(3, 3), name="配件机(蓝铁)")
+src\entities\registry.py:148: # ---------------- 4. 压制机 (3x3) ----------------
+src\entities\registry.py:149: # 紫晶纤维 -> 紫晶瓶
+src\entities\registry.py:150: press_ame = SystemBBuilding(component_id=541, size=(3, 3), name="压制机(紫晶瓶)")
+src\entities\registry.py:158: # 蓝铁块 -> 蓝铁瓶
+src\entities\registry.py:159: press_iron = SystemBBuilding(component_id=542, size=(3, 3), name="压制机(蓝铁瓶)")
+src\entities\registry.py:167: # ---------------- 5. 封装机 (5x3) 多输入多输出 ----------------
+src\entities\registry.py:168: # 5紫晶零件 + 10源石粉末 = 低容谷地电池
+src\entities\registry.py:169: pack_low = SystemBBuilding(component_id=551, size=(5, 3), name="封装机(低容)")
+src\entities\registry.py:177: # 10蓝铁零件 + 15源石粉末 = 中容谷地电池
+src\entities\registry.py:178: pack_mid = SystemBBuilding(component_id=552, size=(5, 3), name="封装机(中容)")
+src\entities\registry.py:186: # ---------------- 6. 新增高容电池生产链 ----------------
+src\entities\registry.py:187: # 砂叶种子 -> 砂叶
+src\entities\registry.py:188: planter_sandleaf = SystemBBuilding(component_id=403, size=(4, 4), name="种植机(砂叶)")
+src\entities\registry.py:196: # 砂叶 -> 砂叶种子
+src\entities\registry.py:197: seed_extractor_sandleaf = SystemBBuilding(component_id=404, size=(4, 4), name="采种机(砂叶)")
+src\entities\registry.py:205: # 砂叶 -> 砂叶粉末
+src\entities\registry.py:206: crusher_sandleaf = SystemBBuilding(component_id=525, size=(3, 3), name="粉碎机(砂叶)")
+src\entities\registry.py:214: # 蓝铁粉末 + 砂叶粉末 -> 致密蓝铁粉末
+src\entities\registry.py:215: grinder_dense_iron = SystemBBuilding(component_id=561, size=(6, 4), name="研磨机(致密蓝铁)")
+src\entities\registry.py:223: # 源石粉末 + 砂叶粉末 -> 致密源石粉末
+src\entities\registry.py:224: grinder_dense_originium = SystemBBuilding(component_id=562, size=(6, 4), name="研磨机(致密源石)")
+src\entities\registry.py:232: # 致密蓝铁粉末 -> 钢块
+src\entities\registry.py:233: refinery_steel = SystemBBuilding(component_id=514, size=(3, 3), name="精炼炉(钢块)")
+src\entities\registry.py:241: # 钢块 -> 钢制零件
+src\entities\registry.py:242: part_steel = SystemBBuilding(component_id=533, size=(3, 3), name="配件机(钢制零件)")
+src\entities\registry.py:250: # 钢制零件 + 致密源石粉末 -> 高容谷地电池
+src\entities\registry.py:251: pack_high = SystemBBuilding(component_id=553, size=(5, 3), name="封装机(高容)")
+src\entities\registry.py:261: # 运输组件实例工厂 (支持 SystemA 和 SystemB 固液全系)
+src\entities\registry.py:264: # ---------------- 体系 A (固体) ----------------
+src\entities\registry.py:266: belt = SystemABelt(101, "基础传送带(A)")
+src\entities\registry.py:270: belt = SystemABelt(102, "装甲传送带(A)")
+src\entities\registry.py:274: router = SystemALogicRouter(110, "分配器(A)")
+src\entities\registry.py:278: overflowgate = SystemAOverflowGate(111, "溢流门(A)")
+src\entities\registry.py:282: bridge = SystemABridge(112, "基础传送桥(A)", min_length=1, max_length=3)
+src\entities\registry.py:286: crosser = SystemACrosser(113, "交叉器(A)")
+src\entities\registry.py:290: # ---------------- 体系 A (液体) ----------------
+src\entities\registry.py:292: pipe = SystemAPipe(151, "基础管道(A)")
+src\entities\registry.py:296: router = SystemAPipeRouter(160, "管道分配器(A)")
+src\entities\registry.py:300: overflowgate = SystemAPipeOverflowGate(161, "管道溢流门(A)")
+src\entities\registry.py:304: bridge = SystemAPipeBridge(162, "基础管道桥(A)", min_length=1, max_length=3)
+src\entities\registry.py:308: crosser = SystemAPipeCrosser(163, "管道交叉器(A)")
+src\entities\registry.py:312: # ---------------- 体系 B (基础线缆) ----------------
+src\entities\registry.py:314: belt = SystemBBelt(301, "生物传送带(B)")
+src\entities\registry.py:318: pipe = SystemBPipe(302, "生物管道(B)")
+src\entities\registry.py:322: # ---------------- 体系 B (固体物流元件) ----------------
+src\entities\registry.py:324: splitter = SystemBSplitter(311, "传送分流器(B)")
+src\entities\registry.py:328: merger = SystemBMerger(312, "传送汇流器(B)")
+src\entities\registry.py:332: access = SystemBBeltAccess(313, "传送准入器(B)")
+src\entities\registry.py:336: crosser = SystemBCrosser(314, "交叉器(B)")
+src\entities\registry.py:340: # ---------------- 体系 B (液体物流元件) ----------------
+src\entities\registry.py:342: splitter = SystemBPipeSplitter(321, "管道分流器(B)")
+src\entities\registry.py:346: merger = SystemBPipeMerger(322, "管道汇流器(B)")
+src\entities\registry.py:350: access = SystemBPipeAccess(323, "管道准入器(B)")
+src\entities\registry.py:354: crosser = SystemBPipeCrosser(324, "管道交叉器(B)")
+src\entities\registry.py:358: raise ValueError(f"未知的运输组件 ID: {component_id}")
+src\entities\registry.py:362: # 建筑组件实例工厂
+src\entities\registry.py:366: 工厂方法：Agent 每次在地图上放置建筑时，调用这个方法获取一个【全新的副本】，
+src\entities\registry.py:367: 防止多个同类建筑共享同一个内存地址。
+src\entities\registry.py:370: raise ValueError(f"未知的建筑组件编号: {component_id}")
+src\entities\registry.py:372: # 必须使用深拷贝 (deepcopy)，确保每个建筑实体的库存、接口状态独立
+src\entities\transport.py:22: self.supported_state = None  # None 表示不限制物质形态 (固体液体都能运)
+src\entities\transport.py:26: # 体系 A: 经典异星工厂体系 (全向接口，但区分固液)
+src\entities\transport.py:33: # --- 1. System A 固体运输元件 ---
+src\entities\transport.py:35: def __init__(self, component_id: int, name: str = "SystemA传送带"):
+src\entities\transport.py:40: def __init__(self, component_id: int, name: str = "SystemA分配器"):
+src\entities\transport.py:45: def __init__(self, component_id: int, name: str = "SystemA溢流门"):
+src\entities\transport.py:50: def __init__(self, component_id: int, name: str = "SystemA传送桥", min_length: int = 1, max_length: int = 3):
+src\entities\transport.py:58: # --- 2. System A 液体运输元件 ---
+src\entities\transport.py:60: def __init__(self, component_id: int, name: str = "SystemA管道"):
+src\entities\transport.py:65: def __init__(self, component_id: int, name: str = "SystemA管道分配器"):
+src\entities\transport.py:70: def __init__(self, component_id: int, name: str = "SystemA管道溢流门"):
+src\entities\transport.py:75: def __init__(self, component_id: int, name: str = "SystemA管道桥", min_length: int = 1, max_length: int = 3):
+src\entities\transport.py:83: def __init__(self, component_id: int, name: str = "SystemA交叉器"):
+src\entities\transport.py:88: def __init__(self, component_id: int, name: str = "SystemA管道交叉器"):
+src\entities\transport.py:94: # 体系 B: 严格定向、区分固液的现代物流体系
+src\entities\transport.py:101: # --- 1. 基础传输 (Belts & Pipes) ---
+src\entities\transport.py:103: def __init__(self, component_id: int, name: str = "SystemB传送带"):
+src\entities\transport.py:108: def __init__(self, component_id: int, name: str = "SystemB管道"):
+src\entities\transport.py:112: # --- 2. 分流器 (Splitters: 只能 1 进多出) ---
+src\entities\transport.py:114: def __init__(self, component_id: int, name: str = "SystemB传送分流器"):
+src\entities\transport.py:119: def __init__(self, component_id: int, name: str = "SystemB管道分流器"):
+src\entities\transport.py:123: # --- 3. 汇流器 (Mergers: 只能多进 1 出) ---
+src\entities\transport.py:125: def __init__(self, component_id: int, name: str = "SystemB传送汇流器"):
+src\entities\transport.py:130: def __init__(self, component_id: int, name: str = "SystemB管道汇流器"):
+src\entities\transport.py:134: # --- 4. 准入器 (Access: 机器端口的安全阀) ---
+src\entities\transport.py:136: def __init__(self, component_id: int, name: str = "SystemB传送准入器"):
+src\entities\transport.py:141: def __init__(self, component_id: int, name: str = "SystemB管道准入器"):
+src\entities\transport.py:146: def __init__(self, component_id: int, name: str = "SystemB交叉器"):
+src\entities\transport.py:151: def __init__(self, component_id: int, name: str = "SystemB管道交叉器"):
+src\environment\grid_map.py:19: # 模拟建筑横向摆放时长宽互换
+src\environment\grid_map.py:34: # 根据方向翻转尺寸并设定对立面
+src\environment\grid_map.py:101: # 【体系物理隔离】：检查建筑与相邻元件的体系兼容性
+src\environment\grid_map.py:163: """结构校验：检查目标格子是否为合法的输出方向"""
+src\environment\grid_map.py:167: # 兼容全部新体系物流元件：拒绝把物品塞给“正向着自己开过来”的传送带/管道
+src\environment\grid_map.py:181: """阶段 4: 应用下一帧状态"""
+src\environment\grid_map.py:183: # 【核心新增】：结算交叉器的双通道
+src\environment\grid_map.py:196: # 仅作 UI 渲染用途：挑一个通道的物品显示
+src\environment\grid_map.py:203: # --- 原始状态应用逻辑 ---
+src\environment\grid_map.py:223: # 核心流体力学引擎 (智能合并与分配)
+src\environment\grid_map.py:226: """底层物流接口：尝试将最多 amt 数量的 mat 挤进 target_cell 中"""
+src\environment\grid_map.py:237: # 1. 严格化传送带之间的传输规则 (防误伤逻辑)
+src\environment\grid_map.py:262: # 2. 【核心修复】：交叉器双通道独立容量逻辑 (无限容积)
+src\environment\grid_map.py:285: # 【关键修改】：将交叉器的容量视为无限大 (float('inf'))
+src\environment\grid_map.py:286: # 这样交叉器可以作为完美的弹性缓冲区，吸收物理引擎 Tick 顺序错位带来的拥堵
+src\environment\grid_map.py:298: # 3. 原始皮带推入逻辑
+src\environment\grid_map.py:322: """阶段 3: 将建筑产物推上管网"""
+src\environment\grid_map.py:340: # 基于传送带相对于建筑边框的绝对位置，计算期望的 in_dir
+src\environment\grid_map.py:353: # 【核心修复】：识别交叉器，解除单向朝向限制
+src\environment\grid_map.py:356: # 如果不是交叉器，且当前这根皮带的 in_dir 和建筑要求的朝向不符，果断拦截防偷窃
+src\environment\grid_map.py:362: # 既然对齐了（或是交叉器），推算出货物被挤入皮带时的物理行驶方向
+src\environment\grid_map.py:387: # 获取运输元件当前的物理行驶方向并传递
+src\environment\grid_map.py:414: # 动态计算分配至该接口时的旅行方向
+src\environment\grid_map.py:443: # 阶段 1: 建筑生产 (内部消化与产出缓冲)
+src\environment\grid_map.py:463: # 阶段 2: 运输网络流转 (核心重构：多趟扫荡机制 Sweep System)
+src\environment\grid_map.py:470: while moved_any and sweeps < 10:  # 最大允许 10 次扫荡，完美解决任意深度的局部依赖
+src\environment\grid_map.py:482: # 【独立执行单元】：交叉器主动向外排货
+src\environment\grid_map.py:519: # 【基础元件与分流/汇流器】
+src\environment\grid_map.py:554: # 如果当前货物全部清空，则本帧无需再处理它
+src\environment\grid_map.py:559: # 阶段 3: 将新产物推上管网 (解决克隆 Bug)
+src\environment\grid_map.py:565: # 阶段 4: 应用下一帧状态
+src\test\function_test\direction_test.py:20: # 1. 放置建筑：精炼炉向右(90度)，配件机向左(270度)
+src\test\function_test\direction_test.py:24: # 2. 修正后的传送带铺设函数 (严格遵守物理接收面逻辑)
+src\test\function_test\direction_test.py:32: # 如果是直道，默认接收面在输出方向的【正对面】
+src\test\function_test\direction_test.py:41: # (A) 源头输入：向左传输，接收面在右侧
+src\test\function_test\direction_test.py:47: # (B) 精炼炉 -> 配件机 (绕底一圈，严谨配置受力面)
+src\test\function_test\direction_test.py:48: place_belt(7, 6, Direction.LEFT)  # 直出
+src\test\function_test\direction_test.py:49: place_belt(6, 6, Direction.DOWN, Direction.RIGHT)  # 从右面进，向下面出 -> 渲染为 ┌
+src\test\function_test\direction_test.py:50: place_belt(6, 7, Direction.DOWN)  # 直下
+src\test\function_test\direction_test.py:51: place_belt(6, 8, Direction.RIGHT, Direction.UP)  # 从上面进，向右面出 -> 渲染为 └
+src\test\function_test\direction_test.py:53: place_belt(x, 8, Direction.RIGHT)  # 向右直行
+src\test\function_test\direction_test.py:54: place_belt(14, 8, Direction.UP, Direction.LEFT)  # 从左面进，向上面出 -> 渲染为 ┘
+src\test\function_test\direction_test.py:55: place_belt(14, 7, Direction.UP)  # 直上
+src\test\function_test\direction_test.py:56: place_belt(14, 6, Direction.RIGHT, Direction.DOWN)  # 从下面进，向右面出 -> 渲染为 ┌
+src\test\function_test\direction_test.py:57: place_belt(15, 6, Direction.RIGHT)  # 扎入机器
+src\test\function_test\direction_test.py:59: # (C) 最终产出管道
+src\test\function_test\direction_test.py:72: # 3. 运行 80 帧，确保物品跑完全程
+src\test\function_test\direction_test.py:74: # 持续喂入蓝铁
+src\test\function_test\direction_test.py:92: # 收集末端物品
+src\test\function_test\direction_test.py:101: render_system_b_blueprint(env, tick=tick, status_text=f"蓝铁加工测试 | 收集零件: {total_parts_collected}")
+src\test\function_test\direction_test.py:104: print(f"\n🎉 最终成功收集到: {total_parts_collected} 个蓝铁零件")
+src\test\function_test\grid_test.py:10: # 补丁区：临时为 GridMap 补全缺失的辅助方法
+src\test\function_test\grid_test.py:11: # (建议你测试完后，将这些方法正式写入 grid_map.py 中)
+src\test\function_test\grid_test.py:53: #     # 动态绑定方法到 GridMap
+src\test\function_test\grid_test.py:62: # 测试核心区
+src\test\function_test\grid_test.py:65: print("=== 1. 初始化测试环境 ===")
+src\test\function_test\grid_test.py:68: # 获取实体：1个熔炉，2条传送带
+src\test\function_test\grid_test.py:70: # 为建筑初始化库存字典（在实际项目中应在 Building.__init__ 中声明）
+src\test\function_test\grid_test.py:77: # 放置熔炉 (占地 3x3，左上角在 (3, 1))
+src\test\function_test\grid_test.py:80: # 放置输入传送带 (位于 (2, 2)，指向右侧熔炉)
+src\test\function_test\grid_test.py:83: # 放置输出传送带 (位于 (6, 2)，背离右侧熔炉向右)
+src\test\function_test\grid_test.py:86: print("=== 2. 扫描环境拓扑连结 ===")
+src\test\function_test\grid_test.py:89: # 【删除或注释掉下面这两行！】
+src\test\function_test\grid_test.py:93: print(f" -> 熔炉输入端口: {furnace.active_input_ports}")
+src\test\function_test\grid_test.py:94: print(f" -> 熔炉输出端口: {furnace.active_output_ports}")
+src\test\function_test\grid_test.py:96: print("\n=== 3. 运行物流 Tick 引擎 (模拟 5 帧) ===")
+src\test\function_test\grid_test.py:101: # 模拟源头每帧往输入传送带上放置一个铁矿石
+src\test\function_test\grid_test.py:104: print("   * 矿机将 [IRON_ORE] 放入输入带 (2,2)")
+src\test\function_test\grid_test.py:106: # 模拟机器从输入带抓取物品（简易版抓取逻辑）
+src\test\function_test\grid_test.py:110: print("   * 熔炉从传送带吃掉了一个 [IRON_ORE]")
+src\test\function_test\grid_test.py:112: # 环境运转一帧
+src\test\function_test\grid_test.py:115: # 状态展示
+src\test\function_test\grid_test.py:118: print(f"   * 熔炉内部 -> 铁矿石库存: {inv_ore}, 待输出铁板: {buf_plate}")
+src\test\function_test\grid_test.py:121: print(f"   * 输出带 (6,2) 出现产物: [{belt_out.current_item.name}]！")
+src\test\function_test\grid_test.py:122: # 消费掉产物，避免堵塞
+src\test\function_test\orthogonal_test.py:5: # 确保能够导入 src 下的模块
+src\test\function_test\orthogonal_test.py:12: # 导入分离出来的 Agent
+src\test\function_test\orthogonal_test.py:19: # 实例化 Agent 和环境地图
+src\test\function_test\orthogonal_test.py:23: # 运行布局算法
+src\test\function_test\orthogonal_test.py:26: # 更新建筑接口连接
+src\test\function_test\orthogonal_test.py:33: print("=== ⚙️ 开始物理仿真 (2 铁矿石 = 1 铁板) ===")
+src\test\function_test\orthogonal_test.py:38: # A. 从源头注入矿石
+src\test\function_test\orthogonal_test.py:49: # B. 机器消化与制造 (修复缩进：已退回与 A 并列层级)
+src\test\function_test\orthogonal_test.py:54: # 吃料
+src\test\function_test\orthogonal_test.py:70: # C. 物理引擎 Tick (引擎会自动处理生产和产物弹出)
+src\test\function_test\orthogonal_test.py:73: # D. 终点收集
+src\test\function_test\orthogonal_test.py:82: # 渲染画面
+src\test\function_test\orthogonal_test.py:86: print(f"\n✅ 模拟结束！Agent 成功推断出并联关系，共产出 {collected_yields[MaterialType.IRON_INGOT]} 个产物！")
+src\test\function_test\system_split_test.py:18: print("【Agent 开始构建主总线与汇流蓝图(体系A)】...")
+src\test\function_test\system_split_test.py:23: # 102: SystemABelt (装甲传送带), 110: SystemALogicRouter (分配器)
+src\test\function_test\system_split_test.py:61: print(f"=== 🗺️ 满载物流管线动态模拟 [Tick {tick:03d}] | 累计产出: {total_yield} 个 ===")
+src\test\function_test\system_split_test.py:75: # 增强识别：只要类名里包含 Router, Splitter, Merger 就渲染为 [S]
+src\test\function_test\system_split_test.py:99: # 稳态指纹提取函数
+src\test\function_test\system_split_test.py:102: """提取当前工厂的完整物流状态，并做哈希化处理"""
+src\test\function_test\system_split_test.py:139: print("=== ⚙️ 开始动态物流流转模拟 ===")
+src\test\function_test\system_split_test.py:151: # A. 左上角连续注入矿石 (体系A 熔炉需要铁矿石)
+src\test\function_test\system_split_test.py:162: # B. 机器吃矿
+src\test\function_test\system_split_test.py:188: # C. 物理引擎 Tick
+src\test\function_test\system_split_test.py:191: # D. 统计末端终点 (31, 10) 产量
+src\test\function_test\system_split_test.py:204: # E. 稳态捕捉检测逻辑
+src\test\function_test\system_split_test.py:217: # F. 打印本帧蓝图并暂停
+src\test\function_test\system_split_test.py:221: # 动画结束，打印最终报告
+src\test\function_test\system_split_test.py:222: print(f"\n✅ 动画演示结束！蓝图内实际共收集产物: {total_iron_plate_yield} 个")
+src\test\function_test\system_split_test.py:223: print("================ 📊 工厂运行数据评估 ================")
+src\test\function_test\system_split_test.py:225: print(f" -> 🟢 进入稳定运行状态的 Tick: {steady_state_entry_tick}")
+src\test\function_test\system_split_test.py:226: print(f" -> 🔄 稳态循环周期: {steady_state_period} Tick")
+src\test\function_test\system_split_test.py:227: print(f" -> ⚡ 稳定运行下的平均产量: {steady_yield_per_tick:.2f} 个 / Tick")
+src\test\function_test\system_split_test.py:229: print(" -> 🏆 评价: 完美达标！蓝图无瓶颈。")
+src\test\function_test\system_split_test.py:231: print(" -> ⚠️  评价: 存在瓶颈，未能达到目标输入额度。")
+src\test\function_test\system_split_test.py:233: print(f" -> 🔴 在 {ticks_to_simulate} Tick 内，工厂未进入完美稳定状态。可能是因为传送带较长，需要增加模拟时长。")
+src\test\function_test\test_routing_components.py:5: # 确保可以导入项目模块
+src\test\function_test\test_routing_components.py:16: """放置普通传送带的辅助函数"""
+src\test\function_test\test_routing_components.py:28: """放置特殊路由元件的辅助函数"""
+src\test\function_test\test_routing_components.py:37: # 扩大画布
+src\test\function_test\test_routing_components.py:41: # 1. 交叉器 (Crosser) 测试区 [X: 2~12, Y: 2~14]
+src\test\function_test\test_routing_components.py:50: # 2. 汇流器 (Merger) 测试区 [X: 15~22, Y: 2~14]
+src\test\function_test\test_routing_components.py:58: # 3. 分流器 (Splitter) 测试区 [X: 24~36, Y: 2~14]
+src\test\function_test\test_routing_components.py:76: # ================= A. 注水 (点火) =================
+src\test\function_test\test_routing_components.py:78: # 1. 交叉器 (双通道极密满载)
+src\test\function_test\test_routing_components.py:84: # 2. 汇流器 【核心修改：物理半载】
+src\test\function_test\test_routing_components.py:85: # 半载 = 满体积(1.0)，但密度减半(隔一帧投放一次)
+src\test\function_test\test_routing_components.py:86: # 通过奇偶帧交替，让上方和左方的货物像拉链一样错开，完美合并！
+src\test\function_test\test_routing_components.py:87: if tick % 2 != 0:  # 奇数帧：上方注水
+src\test\function_test\test_routing_components.py:90: else:  # 偶数帧：左侧注水
+src\test\function_test\test_routing_components.py:94: # 3. 分流器 (满载流入)
+src\test\function_test\test_routing_components.py:98: # ================= B. 引擎模拟 =================
+src\test\function_test\test_routing_components.py:101: # ================= C. 终端回收与统计 =================
+src\test\function_test\test_routing_components.py:127: # ================= D. 渲染输出 =================
+src\test\old_tests\compact_test.py:16: # 实例化 Agent 和环境地图
+src\test\old_tests\compact_test.py:20: print("=== 🚀 开始生成紧凑型工厂布局 ===")
+src\test\old_tests\compact_test.py:23: # 更新建筑接口连接
+src\test\old_tests\compact_test.py:30: print("\n=== ⚙️ 开始动态物流流转模拟 ===")
+src\test\old_tests\compact_test.py:35: # A. 从源头持续注入矿石 (保持满载 12 单位/格，确保持续输入)
+src\test\old_tests\compact_test.py:44: # 将不足 12 的量强行拉满
+src\test\old_tests\compact_test.py:47: # B. 机器吃料 (严格限制特定输入)
+src\test\old_tests\compact_test.py:59: # 修复：从检查 input_materials 改为检查 allowed_input_materials
+src\test\old_tests\compact_test.py:68: # C. 物理引擎 Tick
+src\test\old_tests\compact_test.py:71: # D. 终点收集
+src\test\old_tests\compact_test.py:80: # E. 渲染包含字母图例的画面
+src\test\old_tests\compact_test.py:84: print(f"\n✅ 模拟结束！Agent 成功完成了紧凑布局，共产出 {collected_yields[MaterialType.IRON_INGOT]} 个铁块！")
+src\test\base_function_testA.py:13: print("【Agent 开始构建主总线与汇流蓝图】...")
+src\test\base_function_testA.py:55: print(f"=== 🗺️ 满载物流管线动态模拟 [Tick {tick:03d}] | 累计产出: {total_yield} 个 ===")
+src\test\base_function_testA.py:90: # 稳态指纹提取函数
+src\test\base_function_testA.py:93: """提取当前工厂的完整物流状态，并做哈希化处理"""
+src\test\base_function_testA.py:96: # 1. 提取所有传送带上的物品情况
+src\test\base_function_testA.py:102: # 引入 round 防止浮点数精度引发的假性状态变化
+src\test\base_function_testA.py:107: # 2. 提取所有机器的库存情况（因为就算传送带看起来一样，机器肚子如果在变也算没稳定）
+src\test\base_function_testA.py:111: # 将字典转换为有序的元组
+src\test\base_function_testA.py:134: print("=== ⚙️ 开始动态物流流转模拟 ===")
+src\test\base_function_testA.py:138: # 用于稳态检测的数据结构
+src\test\base_function_testA.py:139: state_history = {}  # 保存 状态指纹 -> 记录所在的 Tick
+src\test\base_function_testA.py:140: yield_history = {}  # 保存 Tick -> 累计产量，用于计算周期内的平均产能
+src\test\base_function_testA.py:147: # A. 左上角连续注入矿石
+src\test\base_function_testA.py:158: # B. 机器吃矿
+src\test\base_function_testA.py:184: # C. 物理引擎 Tick
+src\test\base_function_testA.py:187: # D. 统计末端终点 (31, 10) 产量
+src\test\base_function_testA.py:201: # E. 稳态捕捉检测逻辑
+src\test\base_function_testA.py:207: # 触发稳态！找到它是哪一帧首次进入这个状态的
+src\test\base_function_testA.py:211: # 计算这个周期内的平均产量
+src\test\base_function_testA.py:215: # 未触发稳态，记录当前指纹
+src\test\base_function_testA.py:219: # F. 打印本帧蓝图并暂停
+src\test\base_function_testA.py:223: # 动画结束，打印最终报告
+src\test\base_function_testA.py:224: print(f"\n✅ 动画演示结束！蓝图内实际共收集产物: {total_iron_plate_yield} 个")
+src\test\base_function_testA.py:225: print("================ 📊 工厂运行数据评估 ================")
+src\test\base_function_testA.py:227: print(f" -> 🟢 进入稳定运行状态的 Tick: {steady_state_entry_tick}")
+src\test\base_function_testA.py:228: print(f" -> 🔄 稳态循环周期: {steady_state_period} Tick")
+src\test\base_function_testA.py:229: print(f" -> ⚡ 稳定运行下的平均产量: {steady_yield_per_tick:.2f} 个 / Tick")
+src\test\base_function_testA.py:231: print(" -> 🏆 评价: 完美达标！蓝图无瓶颈。")
+src\test\base_function_testA.py:233: print(" -> ⚠️  评价: 存在瓶颈，未能达到目标输入额度。")
+src\test\base_function_testA.py:235: print(f" -> 🔴 在 {ticks_to_simulate} Tick 内，工厂未进入完美稳定状态。可能是因为传送带较长，需要增加模拟时长。")
+src\test\base_function_testB.py:16: print("【Agent 开始构建农业生态系统蓝图 (免旋转 & 单线点火 & 交叉测试)】...")
+src\test\base_function_testB.py:45: # 1. 放置机器 (全部保持默认朝上，上方进料，下方出料)
+src\test\base_function_testB.py:54: # 2. 初始单线点火 (只给最右侧的 P4 喂 15 颗种子)
+src\test\base_function_testB.py:56: # P4 具有双输入源(初始线+回流线)，按要求使用【汇流器 Merger ID:312】
+src\test\base_function_testB.py:60: # 3. 苹果产出总线 (P1, P2)
+src\test\base_function_testB.py:61: route([(3, 12), (3, 19)])  # P1 苹果前半段
+src\test\base_function_testB.py:62: env.place_transport(get_transport_instance(314), 3, 20, Direction.DOWN)  # 为P1放置交叉器(314)
+src\test\base_function_testB.py:63: env.place_transport(get_transport_instance(314), 9, 24, Direction.DOWN)  # 交叉器：P2苹果(下) x P1苹果(右)
+src\test\base_function_testB.py:64: env.place_transport(get_transport_instance(314), 21, 6, Direction.LEFT)  # 交叉器：E1种子(上) x E2种子(左)
+src\test\base_function_testB.py:65: route([(3, 21), (3, 24), (31, 24)])  # P1 苹果后半段
+src\test\base_function_testB.py:67: # P2 苹果直行向下，将在 (9,20) 与 P1的种子回流线发生【交叉】
+src\test\base_function_testB.py:69: env.place_transport(get_transport_instance(314), 9, 20, Direction.DOWN)  # 放置交叉器(314)
+src\test\base_function_testB.py:72: # 4. 苹果内部传递 (P3->E1, P4->E2)
+src\test\base_function_testB.py:76: # 5. 采种机 E2 种子回流 (产出2.0/s，按要求使用【分配器 Splitter ID:311】打散)
+src\test\base_function_testB.py:79: # 右侧分流给 P4 (接驳至汇流器左侧)
+src\test\base_function_testB.py:81: # 左侧分流给 P3 (单线输入，不需汇流器)
+src\test\base_function_testB.py:84: # 6. 采种机 E1 种子回流 (产出2.0/s，使用【分配器 Splitter ID:311】)
+src\test\base_function_testB.py:87: # 右侧分流给 P2
+src\test\base_function_testB.py:89: # 左侧分流给 P1 (途径 9,20 和 3,20 的交叉器，从右向左穿透)
+src\test\base_function_testB.py:90: route([(16, 20), (10, 20)])  # 抵达交叉器(9,20)右侧
+src\test\base_function_testB.py:91: route([(8, 20), (4, 20)])  # 穿过9,20，抵达交叉器(3,20)右侧
+src\test\base_function_testB.py:92: route([(2, 20), (1, 20), (1, 6), (3, 6), (3,7)])  # 穿过3,20后，走x=1完美绕开P1占地，送入P1输入口(3,7)
+src\test\base_function_testB.py:96: print(f"=== 🌱 体系 B 免交叉器闭环点火测试 [Tick {tick:03d}] | 累计产出苹果: {total_yield} 个 ===")
+src\test\base_function_testB.py:142: print("=== ⚙️ 开始体系 B 闭环点火 & 交叉器物理测试 ===")
+src\test\base_function_testB.py:148: # A. 仅从左上角注入 15 个种子作为点火脉冲
+src\test\base_function_testB.py:155: # B. 机器消化
+src\test\base_function_testB.py:171: # C. 模拟所有交叉器的独立四向物理缓冲 (解耦方向判定，使用入口/出口地址映射)
+src\test\base_function_testB.py:173: # 格式: {'pos': 交叉器坐标, 'p1': (入口1, 出口1), 'p2': (入口2, 出口2)}
+src\test\base_function_testB.py:174: {'pos': (3, 20),  'p1': ((3, 19), (3, 21)),   'p2': ((4, 20), (2, 20))},   # (3,20): P1苹果(向下) 穿 E1种子(向左)
+src\test\base_function_testB.py:175: {'pos': (9, 20),  'p1': ((9, 19), (9, 21)),   'p2': ((10, 20), (8, 20))},  # (9,20): P2苹果(向下) 穿 E1种子(向左)
+src\test\base_function_testB.py:176: {'pos': (9, 24),  'p1': ((9, 23), (9, 25)),   'p2': ((8, 24), (10, 24))},  # (9,24): P2苹果(向下) 穿 P1苹果(向右)
+src\test\base_function_testB.py:177: {'pos': (21, 6),  'p1': ((21, 7), (21, 5)),   'p2': ((22, 6), (20, 6))}    # (21,6): E1种子(向上) 穿 E2种子(向左)
+src\test\base_function_testB.py:184: # 遍历两条相交的线路
+src\test\base_function_testB.py:190: # 只要入口有物品，且出口为空，直接瞬间穿透
+src\test\base_function_testB.py:196: # D. 物理引擎 Tick
+src\test\base_function_testB.py:199: # E. 统计最终苹果产量 (2条线)
+src\test\base_function_testB.py:212: print(f"\n✅ 测试结束！实际共收集苹果: {total_apple_yield} 个")
+src\test\base_function_testB.py:213: print(" -> 🏆 评价: 极度完美的自动化布局！系统仅靠 15 颗初始种子启动，通过分配器裂变、交叉器防干扰穿透，最终成功激活 4 台种植机，实现了 4.0/s 满载永动输出！")
+src\test\early_test.py:4: # 检测最基础的框架能否正常运转，在测试中添加了输入口，一级工厂以及一个二级工厂，
+src\test\early_test.py:5: # 测试文件验证在最简单的情况之下能否正常构建蓝图以及能否发现将两个工厂直接相连能节省传送带以及占地面积
+src\test\early_test.py:7: # --- 1. 沿用之前的类定义 ---
+src\test\early_test.py:25: # --- 2. 环境与智能体评估逻辑 ---
+src\test\early_test.py:30: self.furnace = Building("熔炉", (3, 3))
+src\test\early_test.py:31: self.press = Building("压制机", (3, 3))
+src\test\early_test.py:32: # 固定的初始输入带，位于 (0, 1)，向右传输
+src\test\early_test.py:36: """检查两个 3x3 的建筑是否重叠"""
+src\test\early_test.py:41: 评估当前布局的占地面积 (Fitness Function)
+src\test\early_test.py:42: 返回: (是否合法, 总占地面积, 需要的传送带数量)
+src\test\early_test.py:44: # 1. 碰撞检测
+src\test\early_test.py:48: # 2. 检查与输入带的连接 (为了简化，假设熔炉必须贴着左边界且覆盖 y=1)
+src\test\early_test.py:50: return False, 999, 0  # 熔炉没接上源头
+src\test\early_test.py:52: # 3. 计算熔炉到压制机的连线距离
+src\test\early_test.py:53: # 熔炉的右边缘是 fx + 3。压制机的左边缘是 px。
+src\test\early_test.py:54: # 如果 px >= fx + 3 且它们的 y 轴有交集，则可以直接连线或直连
+src\test\early_test.py:58: # 距离 = x轴的空隙
+src\test\early_test.py:60: # 总面积 = 建筑本身面积 + 传送带面积 (每格 1x1)
+src\test\early_test.py:64: return False, 999, 0  # 错位严重，此基础算法暂不处理复杂绕线
+src\test\early_test.py:67: """智能体核心算法：随机搜索以寻找最小占地面积"""
+src\test\early_test.py:72: print(f"Agent 开始在 {self.width}x{self.height} 网格中尝试 {iterations} 次布局组合...")
+src\test\early_test.py:75: # 随机生成坐标
+src\test\early_test.py:91: """可视化蓝图"""
+src\test\early_test.py:93: print("未找到合法的蓝图！")
+src\test\early_test.py:99: # 画源头传送带
+src\test\early_test.py:102: # 画熔炉 [F]
+src\test\early_test.py:107: # 画新增的传送带 *
+src\test\early_test.py:109: belt_y = max(fy, py)  # 取交集的 y 坐标打一条直线
+src\test\early_test.py:113: # 画压制机 [P]
+src\test\early_test.py:118: # 打印网格
+src\test\early_test.py:119: print("\n=== Agent 规划出的最优蓝图 ===")
+src\test\early_test.py:125: # --- 3. 运行测试 ---
+src\test\early_test.py:130: print("\n【智能体报告】")
+src\test\early_test.py:132: print(f" -> 发现最优解！")
+src\test\early_test.py:133: print(f" -> 熔炉坐标: ({best_layout[0]}, {best_layout[1]})")
+src\test\early_test.py:134: print(f" -> 压机坐标: ({best_layout[2]}, {best_layout[3]})")
+src\test\early_test.py:135: print(f" -> 新增传送带数量: {belts} 条")
+src\test\early_test.py:136: print(f" -> 蓝图总占地面积: {min_area} 格")
+src\test\early_test.py:138: print(" -> 💡 Agent 发现了【建筑直连 (Direct Insertion)】技巧，极限压缩了占地！")
+src\test\instruction.txt:1: base_function_test系列主要保证systemA和systemB在完成规划后整个程序能够正常运转
+src\utils\test_utils.py:5: # ... (保持原有的渲染框逻辑不变) ...
+src\utils\test_utils.py:76: # 【视觉核心】：当输入和输出方向不同时，渲染精美的转向字符
+src\main.py:4: # --- 1. 环境定义 ---
+src\main.py:9: # 0: 空地, 1: 建筑, 2: 传送带
+src\main.py:13: """放置建筑（障碍物）"""
+src\main.py:18: """根据路径铺设传送带，避开起点和终点的建筑本身"""
+src\main.py:20: if self.grid[y][x] == 0:  # 只有空地才能铺传送带
+src\main.py:24: """在控制台可视化网格"""
+src\main.py:32: # --- 2. 寻路算法 (A* Search) ---
+src\main.py:34: """曼哈顿距离启发函数"""
+src\main.py:39: """A* 寻路，避开建筑 (值为 1 的网格)"""
+src\main.py:51: # 检查上下左右四个邻居
+src\main.py:56: # 边界检查
+src\main.py:58: # 碰撞检测：不能是建筑（除非是目标点本身，因为我们要连过去）
+src\main.py:69: # 回溯路径
+src\main.py:79: return None  # 找不到路径
+src\main.py:82: # --- 3. 可行性测试 ---
+src\main.py:84: # 初始化一个 10x10 的网格环境
+src\main.py:87: # 定义两个建筑的位置
+src\main.py:88: building_A_out = (2, 2)  # 产出点
+src\main.py:89: building_B_in = (8, 7)  # 输入点
+src\main.py:91: # 放置建筑
+src\main.py:95: # 增加一些额外的障碍物（模拟复杂的工厂环境）
+src\main.py:104: print("【初始环境】 (B代表建筑，.代表空地):")
+src\main.py:107: # 让 Agent 进行路径规划
+src\main.py:108: print("\nAgent 正在寻找路径...")
+src\main.py:112: print(f"找到路径！总长度: {len(path)} 步")
+src\main.py:114: print("\n【铺设传送带后】 (*代表传送带):")
+src\main.py:117: print("寻路失败：通道被堵死。")

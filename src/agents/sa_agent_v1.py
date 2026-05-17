@@ -12,10 +12,7 @@ from agents.utils import get_recipe_catalog
 
 
 class SABaselineAgent:
-    """
-    结合了 generic_baseline 体系的模拟退火布局智能体。
-    使用退火算法进行全局 Block/Node 的坐标优化，随后使用多源多目标 A* 完成浮动引脚连线。
-    """
+    'Layout status message.'
 
     def __init__(self, target_outputs: Dict[MaterialType, float], available_inputs: List[MaterialType]):
         self.target_outputs_dict = target_outputs
@@ -28,37 +25,40 @@ class SABaselineAgent:
         self.used_ports: Set[Tuple[int, int]] = set()
         self.generated_inputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
 
-        # 模拟退火参数
+        # Implementation note.
         self.initial_temp = 1000.0
         self.cooling_rate = 0.96
         self.min_temp = 1.0
         self.iters_per_temp = 100
 
     def optimize(self, env: GridMap):
-        print("\n[SABaselineAgent] 开始执行基于模拟退火的全局布局优化...")
+        print('Layout status message.')
 
-        # 1. 计算所需建筑与依赖图 (继承自 baseline)
+        # Building placement logic.
         self._calculate_ratios_and_instances()
         self._build_instance_graph()
 
-        # 2. 模拟退火布局 (替代原有的 _partition_blocks 和 _layout_blocks)
+        # Building placement logic.
         best_state = self._run_simulated_annealing(env)
 
-        # 3. 将最优解写入地图与状态
+        # Implementation note.
         self.node_positions = best_state
         for nid, pos in self.node_positions.items():
             building = self.nodes[nid]
             env.place_building(building, pos[0], pos[1], Direction.UP)
 
-        # 4. 浮动引脚分配与最短距离连线 (继承自 baseline)
+        # Implementation note.
         self._route_connections(env)
 
     # ==========================================
-    # 核心：模拟退火算法引擎
+    # Implementation note.
     # ==========================================
     def _run_simulated_annealing(self, env: GridMap) -> Dict[int, Tuple[int, int]]:
-        # 生成初始状态：将所有节点随机撒在地图中央区域
+        # Implementation note.
         current_state = {}
         cx, cy = env.width // 2, env.height // 2
         for nid, b in self.nodes.items():
@@ -93,7 +93,7 @@ class SABaselineAgent:
 
             current_temp *= self.cooling_rate
 
-        print(f"[SABaselineAgent] 退火完成！最优布局代价值: {best_cost:.2f}")
+        print(f"[SABaselineAgent] Annealing finished. Best layout cost: {best_cost:.2f}")
         return best_state
 
     def _evaluate_state(self, state: Dict[int, Tuple[int, int]], env: GridMap) -> float:
@@ -102,20 +102,20 @@ class SABaselineAgent:
         max_x = max_y = 0
         nids = list(state.keys())
 
-        # 1. 边界与面积计算
+        # Implementation note.
         for nid, (x, y) in state.items():
             w, h = self.nodes[nid].size
             min_x, min_y = min(min_x, x), min(min_y, y)
             max_x, max_y = max(max_x, x + w), max(max_y, y + h)
 
-            # 越界惩罚
+            # Cost and penalty calculation.
             if x < 2 or y < 3 or x + w >= env.width - 2 or y + h >= env.height - 3:
                 cost += 10000.0
 
         area = max(0, max_x - min_x) * max(0, max_y - min_y)
         cost += area * 1.5
 
-        # 2. AABB 重叠惩罚 (绝对不允许建筑重叠)
+        # Building placement logic.
         for i in range(len(nids)):
             for j in range(i + 1, len(nids)):
                 nid1, nid2 = nids[i], nids[j]
@@ -124,25 +124,25 @@ class SABaselineAgent:
                 w1, h1 = self.nodes[nid1].size
                 w2, h2 = self.nodes[nid2].size
 
-                # 增加 1 格的呼吸空间 (padding)，防止靠得太紧堵死端口
+                # Input/output port handling.
                 if not (x1 + w1 + 1 <= x2 or x2 + w2 + 1 <= x1 or y1 + h1 + 1 <= y2 or y2 + h2 + 1 <= y1):
                     cost += 5000.0
 
-        # 3. 曼哈顿线长预估 (针对内部边)
+        # Implementation note.
         for edge in self.edges:
             sx, sy = state[edge['src']]
             dx, dy = state[edge['dst']]
             cost += (abs(sx - dx) + abs(sy - dy)) * 2.0
 
-        # 4. 外部端口线长预估 (y=0 和 y=height-1)
+        # Input/output port handling.
         for nid, b in self.nodes.items():
             for mat in b.input_materials:
                 if mat in self.available_inputs:
-                    # 原料需要从顶部下来，Y坐标越小越好
+                    # Implementation note.
                     cost += state[nid][1] * 1.0
             for mat in b.output_materials:
                 if mat in self.target_outputs_dict:
-                    # 产物需要送往底部，距离底部越近越好
+                    # Implementation note.
                     cost += (env.height - state[nid][1]) * 1.0
 
         return cost
@@ -153,11 +153,11 @@ class SABaselineAgent:
         x, y = new_state[nid]
 
         if random.random() < 0.7:
-            # 随机平移 1-3 格
+            # Implementation note.
             dx, dy = random.randint(-3, 3), random.randint(-3, 3)
             new_state[nid] = (max(2, min(env.width - 2, x + dx)), max(3, min(env.height - 3, y + dy)))
         else:
-            # 随机互换位置
+            # Implementation note.
             nid2 = random.choice(list(new_state.keys()))
             new_state[nid] = state[nid2]
             new_state[nid2] = (x, y)
@@ -165,7 +165,7 @@ class SABaselineAgent:
         return new_state
 
     # ==========================================
-    # 以下为完全沿用 generic_baseline 的网络与路由逻辑
+    # Implementation note.
     # ==========================================
     def _calculate_ratios_and_instances(self):
         demand_queue = {k: v for k, v in self.target_outputs_dict.items()}
@@ -222,7 +222,7 @@ class SABaselineAgent:
                 ports.append(port)
         return ports
 
-    def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]) -> \
+    def _a_star_route_multi(self, env: GridMap, starts: List[Tuple[int, int]], goals: List[Tuple[int, int]]) ->\
     Optional[List[Tuple[int, int]]]:
         def heuristic(curr):
             return min(abs(curr[0] - g[0]) + abs(curr[1] - g[1]) for g in goals)
@@ -299,6 +299,9 @@ class SABaselineAgent:
         return None
 
     def _route_connections(self, env: GridMap):
+        self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
         routing_tasks = []
         for edge in self.edges:
             routing_tasks.append(
@@ -329,11 +332,17 @@ class SABaselineAgent:
                 src_x = self.node_positions[t['src']][0]
                 goals = [(x, env.height - 1) for x in range(max(0, src_x - 5), min(env.width, src_x + 8))]
 
-            if not starts or not goals: continue
+            if not starts or not goals:
+                self.failed_routes.append(t)
+                continue
 
             path = self._a_star_route_multi(env, starts, goals)
 
             if path:
+                if t['src_type'] == 'ext_in' or t['dst_type'] == 'ext_out':
+                    self.external_io_paths.append(set(path))
+                else:
+                    self.internal_route_paths.append(set(path))
                 start_port, end_port = path[0], path[-1]
                 if t['src_type'] == 'node': self.used_ports.add(start_port)
                 if t['dst_type'] == 'node': self.used_ports.add(end_port)
@@ -371,3 +380,4 @@ class SABaselineAgent:
                             env.place_transport(comp, px, py, Direction.DOWN)
             else:
                 print(f"[Warning] Congestion: Unable to route optimally for {t}")
+                self.failed_routes.append(t)

@@ -3,7 +3,7 @@ import random
 from collections import defaultdict, deque
 from typing import Dict, List, Tuple
 
-from agents.sequence_pair_sa_agent_v4 import SequencePairSaAgentV4
+from agents.sequence_pair_ga_agent_v4 import SequencePairGaAgentV4
 from agents.sequence_pair_sa_agent_v2 import CellVariant, ProductionCell
 from agents.fdp_sa_agent_v2 import FdpSaAgentV2
 from entities.material import MaterialType
@@ -17,7 +17,7 @@ except Exception:
     cp_model = None
 
 
-class FlowCpAgentV1(SequencePairSaAgentV4):
+class FlowCpAgentV1(SequencePairGaAgentV4):
     """
     Min-cost-flow graph assignment + CP-style production-cell packing.
 

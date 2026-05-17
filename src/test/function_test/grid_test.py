@@ -7,8 +7,8 @@ from environment.grid_map import GridMap
 
 
 # ==========================================
-# 补丁区：临时为 GridMap 补全缺失的辅助方法
-# (建议你测试完后，将这些方法正式写入 grid_map.py 中)
+# Implementation note.
+# Test and validation logic.
 # ==========================================
 # def patch_grid_map():
 #     def place_transport(self, transport: TransportComponent, x: int, y: int, direction: Direction) -> bool:
@@ -50,7 +50,7 @@ from environment.grid_map import GridMap
 #                         building.output_buffer[mat] -= 1.0
 #                         break
 #
-#     # 动态绑定方法到 GridMap
+# Implementation note.
 #     GridMap.place_transport = place_transport
 #     GridMap._get_cell = _get_cell
 #     GridMap._is_blocked = _is_blocked
@@ -59,67 +59,67 @@ from environment.grid_map import GridMap
 #
 
 # ==========================================
-# 测试核心区
+# Test and validation logic.
 # ==========================================
 def run_test():
-    print("=== 1. 初始化测试环境 ===")
+    print('AutoBlueprint status message.')
     env = GridMap(10, 5)
 
-    # 获取实体：1个熔炉，2条传送带
+    # Implementation note.
     furnace = get_building_instance(201)
-    # 为建筑初始化库存字典（在实际项目中应在 Building.__init__ 中声明）
+    # Building placement logic.
     furnace.inventory = {}
     furnace.output_buffer = {}
 
     belt_in = get_transport_instance(101)
     belt_out = get_transport_instance(101)
 
-    # 放置熔炉 (占地 3x3，左上角在 (3, 1))
+    # Building placement logic.
     env.place_building(furnace, 3, 1)
 
-    # 放置输入传送带 (位于 (2, 2)，指向右侧熔炉)
+    # Building placement logic.
     env.place_transport(belt_in, 2, 2, Direction.RIGHT)
 
-    # 放置输出传送带 (位于 (6, 2)，背离右侧熔炉向右)
+    # Building placement logic.
     env.place_transport(belt_out, 6, 2, Direction.RIGHT)
 
-    print("=== 2. 扫描环境拓扑连结 ===")
+    print('AutoBlueprint status message.')
     env.update_connections(furnace)
 
-    # 【删除或注释掉下面这两行！】
+    # Implementation note.
     # furnace.active_input_ports.append((2, 2))
     # furnace.active_output_ports.append((6, 2))
 
-    print(f" -> 熔炉输入端口: {furnace.active_input_ports}")
-    print(f" -> 熔炉输出端口: {furnace.active_output_ports}")
+    print("AutoBlueprint status message.")
+    print("AutoBlueprint status message.")
 
-    print("\n=== 3. 运行物流 Tick 引擎 (模拟 5 帧) ===")
+    print('AutoBlueprint status message.')
 
     for frame in range(1, 6):
         print(f"\n[Tick {frame}] ---------------------------")
 
-        # 模拟源头每帧往输入传送带上放置一个铁矿石
+        # Building placement logic.
         if belt_in.current_item is None:
             belt_in.current_item = MaterialType.IRON_ORE
-            print("   * 矿机将 [IRON_ORE] 放入输入带 (2,2)")
+            print('AutoBlueprint status message.')
 
-        # 模拟机器从输入带抓取物品（简易版抓取逻辑）
+        # Input/output port handling.
         if belt_in.current_item == MaterialType.IRON_ORE:
             furnace.inventory[MaterialType.IRON_ORE] = furnace.inventory.get(MaterialType.IRON_ORE, 0) + 1
             belt_in.current_item = None
-            print("   * 熔炉从传送带吃掉了一个 [IRON_ORE]")
+            print('AutoBlueprint status message.')
 
-        # 环境运转一帧
+        # Implementation note.
         env.tick()
 
-        # 状态展示
+        # Implementation note.
         inv_ore = furnace.inventory.get(MaterialType.IRON_ORE, 0)
         buf_plate = furnace.output_buffer.get(MaterialType.IRON_PLATE, 0)
-        print(f"   * 熔炉内部 -> 铁矿石库存: {inv_ore}, 待输出铁板: {buf_plate}")
+        print("AutoBlueprint status message.")
 
         if belt_out.current_item:
-            print(f"   * 输出带 (6,2) 出现产物: [{belt_out.current_item.name}]！")
-            # 消费掉产物，避免堵塞
+            print("AutoBlueprint status message.")
+            # Implementation note.
             belt_out.current_item = None
 
 

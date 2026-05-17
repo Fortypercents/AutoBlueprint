@@ -1,5 +1,6 @@
 from enum import Enum, auto
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, List, Tuple
+
 from entities.material import MaterialType
 from entities.transport import Direction
 
@@ -13,7 +14,7 @@ class Building:
     def __init__(self, component_id: int, size: Tuple[int, int], name: str = "Unknown"):
         self.component_id = component_id
         self.name = name
-        self.size = size  # (width, height)
+        self.size = size
 
         self.system_type = SystemType.SYSTEM_A
 
@@ -30,7 +31,6 @@ class Building:
         self.allows_omni_ports = True
         self.allows_direct_insertion = True
 
-        # 默认方向和出入面
         self.direction = Direction.UP
         self.input_side = Direction.UP
         self.output_side = Direction.DOWN
@@ -39,11 +39,10 @@ class Building:
         self.active_output_ports: List[Tuple[int, int]] = []
 
     def set_direction(self, direction: Direction):
-        """核心机制1：旋转建筑，自动设定对立面为输入输出口"""
+        """Rotate the building and update opposite input/output sides."""
         self.direction = direction
 
         if not self.allows_omni_ports:
-            # 假定旋转方向即为“输入口”的朝向，那么输出口必然在对面
             self.input_side = direction
             if direction == Direction.UP:
                 self.output_side = Direction.DOWN

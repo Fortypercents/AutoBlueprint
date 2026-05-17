@@ -34,6 +34,8 @@ class FdpSaAgentV2:
         self.generated_outputs = defaultdict(list)
         self.generated_outputs = defaultdict(list)
         self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
         self._last_trial_failed = []
 
         self.map_margin = 2
@@ -465,6 +467,8 @@ class FdpSaAgentV2:
         saved_inputs = defaultdict(list, {k: v[:] for k, v in self.generated_inputs.items()})
         saved_outputs = defaultdict(list, {k: v[:] for k, v in self.generated_outputs.items()})
         saved_failed = list(self.failed_routes)
+        saved_external = [set(path) for path in self.external_io_paths]
+        saved_internal = [set(path) for path in self.internal_route_paths]
 
         trial_env = GridMap(env.width, env.height)
         self.node_positions = {k: v.copy() for k, v in state.items()}
@@ -489,6 +493,8 @@ class FdpSaAgentV2:
         self.generated_inputs = saved_inputs
         self.generated_outputs = saved_outputs
         self.failed_routes = saved_failed
+        self.external_io_paths = saved_external
+        self.internal_route_paths = saved_internal
         return failed_count, route_cells, area
 
     def _route_connections(self, env: GridMap, verbose: bool = True) -> bool:
@@ -547,6 +553,10 @@ class FdpSaAgentV2:
 
     def _lay_path(self, env: GridMap, path: List[Tuple[int, int]], task: Dict):
         start_p, end_p = path[0], path[-1]
+        if task['src_type'] == 'ext_in' or task['dst_type'] == 'ext_out':
+            self.external_io_paths.append(set(path))
+        else:
+            self.internal_route_paths.append(set(path))
         if task['src_type'] == 'node':
             self.used_ports.add(start_p)
         if task['dst_type'] == 'node':
@@ -748,6 +758,8 @@ class FdpSaAgentV2:
         self.generated_inputs.clear()
         self.generated_outputs.clear()
         self.failed_routes = []
+        self.external_io_paths = []
+        self.internal_route_paths = []
 
     def _node_depths(self) -> Dict[int, int]:
         incoming = defaultdict(list)

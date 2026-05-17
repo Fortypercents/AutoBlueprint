@@ -1,5 +1,7 @@
 from enum import Enum
+
 from entities.material import MaterialState
+
 
 class Direction(Enum):
     UP = (0, -1)
@@ -19,35 +21,35 @@ class TransportComponent:
         self.max_capacity = 12.0
 
         self.system_type = "UNKNOWN"
-        self.supported_state = None  # None 表示不限制物质形态 (固体液体都能运)
+        self.supported_state = None  # None means no material-state restriction.
 
 
-# ==========================================
-# 体系 A: 经典异星工厂体系 (全向接口，但区分固液)
-# ==========================================
 class SystemATransport(TransportComponent):
     def __init__(self, component_id: int, name: str):
         super().__init__(component_id, name)
         self.system_type = "SYSTEM_A"
 
-# --- 1. System A 固体运输元件 ---
+
 class SystemABelt(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA传送带"):
+    def __init__(self, component_id: int, name: str = "System A Belt"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemALogicRouter(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA分配器"):
+    def __init__(self, component_id: int, name: str = "System A Router"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemAOverflowGate(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA溢流门"):
+    def __init__(self, component_id: int, name: str = "System A Overflow Gate"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemABridge(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA传送桥", min_length: int = 1, max_length: int = 3):
+    def __init__(self, component_id: int, name: str = "System A Bridge", min_length: int = 1, max_length: int = 3):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
         self.min_length = min_length
@@ -55,99 +57,106 @@ class SystemABridge(SystemATransport):
         self.end_pos = (0, 0)
 
 
-# --- 2. System A 液体运输元件 ---
 class SystemAPipe(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA管道"):
+    def __init__(self, component_id: int, name: str = "System A Pipe"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
+
 
 class SystemAPipeRouter(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA管道分配器"):
+    def __init__(self, component_id: int, name: str = "System A Pipe Router"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
+
 
 class SystemAPipeOverflowGate(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA管道溢流门"):
+    def __init__(self, component_id: int, name: str = "System A Pipe Overflow Gate"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
+
 class SystemAPipeBridge(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA管道桥", min_length: int = 1, max_length: int = 3):
+    def __init__(self, component_id: int, name: str = "System A Pipe Bridge", min_length: int = 1, max_length: int = 3):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
         self.min_length = min_length
         self.max_length = max_length
         self.end_pos = (0, 0)
 
+
 class SystemACrosser(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA交叉器"):
+    def __init__(self, component_id: int, name: str = "System A Crosser"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
 
+
 class SystemAPipeCrosser(SystemATransport):
-    def __init__(self, component_id: int, name: str = "SystemA管道交叉器"):
+    def __init__(self, component_id: int, name: str = "System A Pipe Crosser"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
 
-# ==========================================
-# 体系 B: 严格定向、区分固液的现代物流体系
-# ==========================================
 class SystemBTransport(TransportComponent):
     def __init__(self, component_id: int, name: str):
         super().__init__(component_id, name)
         self.system_type = "SYSTEM_B"
 
-# --- 1. 基础传输 (Belts & Pipes) ---
+
 class SystemBBelt(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB传送带"):
+    def __init__(self, component_id: int, name: str = "System B Belt"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemBPipe(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB管道"):
+    def __init__(self, component_id: int, name: str = "System B Pipe"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
-# --- 2. 分流器 (Splitters: 只能 1 进多出) ---
+
 class SystemBSplitter(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB传送分流器"):
+    def __init__(self, component_id: int, name: str = "System B Splitter"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemBPipeSplitter(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB管道分流器"):
+    def __init__(self, component_id: int, name: str = "System B Pipe Splitter"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
-# --- 3. 汇流器 (Mergers: 只能多进 1 出) ---
+
 class SystemBMerger(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB传送汇流器"):
+    def __init__(self, component_id: int, name: str = "System B Merger"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemBPipeMerger(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB管道汇流器"):
+    def __init__(self, component_id: int, name: str = "System B Pipe Merger"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
-# --- 4. 准入器 (Access: 机器端口的安全阀) ---
+
 class SystemBBeltAccess(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB传送准入器"):
+    def __init__(self, component_id: int, name: str = "System B Belt Access"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
+
 
 class SystemBPipeAccess(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB管道准入器"):
+    def __init__(self, component_id: int, name: str = "System B Pipe Access"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID
 
+
 class SystemBCrosser(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB交叉器"):
+    def __init__(self, component_id: int, name: str = "System B Crosser"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.SOLID
 
+
 class SystemBPipeCrosser(SystemBTransport):
-    def __init__(self, component_id: int, name: str = "SystemB管道交叉器"):
+    def __init__(self, component_id: int, name: str = "System B Pipe Crosser"):
         super().__init__(component_id, name)
         self.supported_state = MaterialState.LIQUID

@@ -1,0 +1,37 @@
+\contentsline {section}{\numberline {1}Introduction}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Research question}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Contributions}{4}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Background and Related Work}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Agents, Layout, and Search}{4}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Routing and Optimisation}{5}{subsection.2.2}%
+\contentsline {section}{\numberline {3}System Overview}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Environment Model}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Entity and Recipe Representation}{5}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Two Logistics Systems}{6}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Task Definition}{6}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}Agent-Environment Interaction}{6}{subsection.3.5}%
+\contentsline {section}{\numberline {4}Agent Design}{6}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Shared Pipeline and Production Graph}{7}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Agent Families and Version Evolution}{7}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Baseline Agent}{8}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Simulated Annealing Agents}{8}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}FDP and Routing-Aware SA Agents}{9}{subsection.4.5}%
+\contentsline {subsection}{\numberline {4.6}SequenceSA and SequenceGA Variants}{9}{subsection.4.6}%
+\contentsline {subsection}{\numberline {4.7}Flow and CP Agent}{10}{subsection.4.7}%
+\contentsline {subsection}{\numberline {4.8}Detailed Routing}{11}{subsection.4.8}%
+\contentsline {section}{\numberline {5}Implementation and Evaluation Method}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Implementation Challenges}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Experimental Question}{11}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Conditions}{12}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}Metrics}{13}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Procedure}{13}{subsection.5.5}%
+\contentsline {section}{\numberline {6}Results}{14}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Best Blueprint Examples}{14}{subsection.6.1}%
+\contentsline {section}{\numberline {7}Discussion}{17}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Answer to the Research Question}{18}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Strengths}{18}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Limitations}{18}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Finding}{19}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Conclusion and Future Work}{19}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Conclusion}{19}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Future Work}{19}{subsection.8.2}%
